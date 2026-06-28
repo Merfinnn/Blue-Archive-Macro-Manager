@@ -3,15 +3,9 @@
 
 CoordMode "Mouse", "Client"
 
-; --- GLOBAL VARIABLES & FOLDER MANAGEMENT ---
-global ConfigDir := A_ScriptDir "\saved binds"
-
-; Create the "saved binds" directory if it doesn't exist yet
-if !DirExist(ConfigDir)
-    DirCreate(ConfigDir)
-
-global MasterIni := ConfigDir "\settings.ini"
-global GameExe := "ahk_exe BlueArchive.exe"
+; --- GLOBAL VARIABLES DECLARATION ---
+global MasterIni := A_ScriptDir "\settings.ini"
+global GameExe := "ahk_exe notepad.exe" ; Change this to the actual game executable name
 global MacroList := Map()
 global QuickCastList := Map()
 global IsRecording := false
@@ -20,7 +14,7 @@ global TempMode := "Normal", TempNoRet := 0
 
 ; Load global preferences and determine which profile to open
 global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
-global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config.ini")
+global IniFile := IniRead(MasterIni, "System", "LastProfile", A_ScriptDir "\config.ini")
 
 ; --- INITIALIZATION ---
 LoadSettings()
@@ -29,13 +23,11 @@ LoadSettings()
 MyGui := Gui("+AlwaysOnTop", "Blue Archive Macro Manager")
 MyGui.SetFont("s9", "Segoe UI")
 
-; PANEL 0: Profile Management
+; PANEL 0: Profile Management (NEW)
 MyGui.Add("GroupBox", "w270 h55", "Configuration Profile")
-ComboFiles := MyGui.Add("ComboBox", "xp+10 yp+20 w130", [])
-BtnLoadProfile := MyGui.Add("Button", "x+5 yp-1 w55 h25", "Load")
+ComboFiles := MyGui.Add("ComboBox", "xp+10 yp+20 w170", [])
+BtnLoadProfile := MyGui.Add("Button", "x+5 yp-1 w75 h25", "Load / New")
 BtnLoadProfile.OnEvent("Click", LoadOrCreateProfile)
-BtnImport := MyGui.Add("Button", "x+5 yp w55 h25", "Import")
-BtnImport.OnEvent("Click", ImportProfile)
 
 ; PANEL 1: Targeted Macro (Coordinate-Locked)
 MyGui.Add("GroupBox", "xm w270 h250", "Targeted Macro (Coordinate-Locked)")
@@ -97,18 +89,15 @@ MyGui.Show("w290")
 
 
 ; =====================================================================
-; --- PROFILE & FILE MANAGER LOGIC ---
+; --- PROFILE MANAGER LOGIC ---
 ; =====================================================================
 UpdateFileDropdown() {
-    global ComboFiles, IniFile, ConfigDir
+    global ComboFiles, IniFile
     files := []
-    
-    ; Scan for .ini files inside the "saved binds" folder
-    Loop Files ConfigDir "\*.ini" {
+    Loop Files A_ScriptDir "\*.ini" {
         if (A_LoopFileName != "settings.ini")
             files.Push(A_LoopFileName)
     }
-    
     ComboFiles.Delete()
     if (files.Length > 0)
         ComboFiles.Add(files)
@@ -138,19 +127,20 @@ ClearAllHotkeys() {
 }
 
 LoadOrCreateProfile(*) {
-    global IniFile, MasterIni, ComboFiles, ConfigDir
+    global IniFile, MasterIni, ComboFiles
     global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
     
     selected := ComboFiles.Text
     if (selected == "")
         return
         
+    ; Ensure it ends with .ini
     if !RegExMatch(selected, "\.ini$")
         selected .= ".ini"
         
     ClearAllHotkeys()
     
-    IniFile := ConfigDir "\" selected
+    IniFile := A_ScriptDir "\" selected
     IniWrite(IniFile, MasterIni, "System", "LastProfile")
     
     LoadSettings()
@@ -166,48 +156,6 @@ LoadOrCreateProfile(*) {
     DDL_ExecMode.Choose(1)
     
     MsgBox("Profile [" selected "] is now active!", "Profile Switched", 64)
-}
-
-ImportProfile(*) {
-    global ConfigDir, MasterIni, IniFile
-    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
-
-    ; Open Windows File Explorer dialog
-    SelectedFile := FileSelect(3, "", "Select Configuration File to Import", "INI Files (*.ini)")
-    if (SelectedFile == "")
-        return ; User cancelled the dialog
-
-    SplitPath SelectedFile, &OutFileName
-    DestPath := ConfigDir "\" OutFileName
-
-    ; Check if the file is already inside the saved binds folder
-    if (SelectedFile != DestPath) {
-        try {
-            FileCopy SelectedFile, DestPath, 1 ; 1 = overwrite if exists
-        } catch {
-            MsgBox("Failed to import the file. Please check file permissions.", "File Error", 48)
-            return
-        }
-    }
-
-    ClearAllHotkeys()
-    
-    IniFile := DestPath
-    IniWrite(IniFile, MasterIni, "System", "LastProfile")
-
-    LoadSettings()
-    UpdateFileDropdown()
-    UpdateDropdown()
-    UpdateQCGUI()
-
-    ; Auto clear input fields
-    ComboName.Text := ""
-    EditKey.Value := ""
-    EditPreKey.Value := ""
-    ChkNoRet.Value := 0
-    DDL_ExecMode.Choose(1)
-
-    MsgBox("Profile [" OutFileName "] successfully imported and activated!", "Import Success", 64)
 }
 
 

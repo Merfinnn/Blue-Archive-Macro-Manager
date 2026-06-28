@@ -1,26 +1,18 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
+; Set coordinate mode relative to the active window's client area (ignores title bar/borders)
 CoordMode "Mouse", "Client"
 
-; --- GLOBAL VARIABLES & FOLDER MANAGEMENT ---
-global ConfigDir := A_ScriptDir "\saved binds"
-
-; Create the "saved binds" directory if it doesn't exist yet
-if !DirExist(ConfigDir)
-    DirCreate(ConfigDir)
-
-global MasterIni := ConfigDir "\settings.ini"
-global GameExe := "ahk_exe BlueArchive.exe"
+; --- GLOBAL VARIABLES DECLARATION ---
+global IniFile := A_ScriptDir "\config.ini"
+global GameExe := "ahk_exe BlueArchive.exe" ; <--- Change to your specific emulator/game executable
 global MacroList := Map()
 global QuickCastList := Map()
 global IsRecording := false
 global TempName := "", TempKey := "", TempPreKey := ""
 global TempMode := "Normal", TempNoRet := 0
-
-; Load global preferences and determine which profile to open
-global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
-global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config.ini")
+global EnableTooltip := 1
 
 ; --- INITIALIZATION ---
 LoadSettings()
@@ -29,46 +21,41 @@ LoadSettings()
 MyGui := Gui("+AlwaysOnTop", "Blue Archive Macro Manager")
 MyGui.SetFont("s9", "Segoe UI")
 
-; PANEL 0: Profile Management
-MyGui.Add("GroupBox", "w270 h55", "Configuration Profile")
-ComboFiles := MyGui.Add("ComboBox", "xp+10 yp+20 w130", [])
-BtnLoadProfile := MyGui.Add("Button", "x+5 yp-1 w55 h25", "Load")
-BtnLoadProfile.OnEvent("Click", LoadOrCreateProfile)
-BtnImport := MyGui.Add("Button", "x+5 yp w55 h25", "Import")
-BtnImport.OnEvent("Click", ImportProfile)
-
 ; PANEL 1: Targeted Macro (Coordinate-Locked)
-MyGui.Add("GroupBox", "xm w270 h250", "Targeted Macro (Coordinate-Locked)")
+MyGui.Add("GroupBox", "w270 h250", "Targeted Macro (Coordinate-Locked)")
 MyGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
 
+; ComboBox for auto-filling existing macro data
 ComboName := MyGui.Add("ComboBox", "w250 vMacroName", [])
 ComboName.OnEvent("Change", AutoFillMacro)
 
 MyGui.Add("Text", "w115", "Trigger Keybind:")
-EditKey := MyGui.Add("Edit", "w115 vKeybind", "F3")
+EditKey := MyGui.Add("Edit", "w115 vKeybind", "")
 
 MyGui.Add("Text", "x+10 yp w115", "Pre-Key (Optional):")
 EditPreKey := MyGui.Add("Edit", "w115 vPreKey", "")
 
 MyGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
-DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Turbo)"])
+DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Rapid Fire)"])
 
 ChkNoRet := MyGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
 
+; Save edits without requiring re-recording
 BtnSaveEdit := MyGui.Add("Button", "xm+10 y+10 w250 h26", "Save Profile Settings (Preserve Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
 
+; Record new or overwrite coordinates
 BtnRecord := MyGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
 BtnRecord.OnEvent("Click", TriggerRecord)
 
-; PANEL 2: Active Targeted Macros
+; PANEL: Active Targeted Macros
 MyGui.Add("GroupBox", "xm w270 h90", "Active Targeted Macros")
 DDL_Macro := MyGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
 
 BtnDelete := MyGui.Add("Button", "w250", "Delete Selected Macro")
 BtnDelete.OnEvent("Click", DeleteMacro)
 
-; PANEL 3: Quick Cast (Cursor-bound Spam)
+; PANEL 2: Quick Cast (Cursor-bound Spam)
 MyGui.Add("GroupBox", "xm w270 h115", "Quick Cast (Spam at Cursor Position)")
 MyGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
 QCEdit1 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
@@ -86,155 +73,20 @@ QCEdit5 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
 BtnSaveQC := MyGui.Add("Button", "x+10 yp-2 w125", "Save QC Keybinds")
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
-; PANEL 4: Additional Settings
+; PANEL 3: Additional Settings
 ChkTooltip := MyGui.Add("CheckBox", "xm y+15 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
 
-UpdateFileDropdown()
 UpdateDropdown()
 UpdateQCGUI()
 MyGui.Show("w290")
 
-
-; =====================================================================
-; --- PROFILE & FILE MANAGER LOGIC ---
-; =====================================================================
-UpdateFileDropdown() {
-    global ComboFiles, IniFile, ConfigDir
-    files := []
-    
-    ; Scan for .ini files inside the "saved binds" folder
-    Loop Files ConfigDir "\*.ini" {
-        if (A_LoopFileName != "settings.ini")
-            files.Push(A_LoopFileName)
-    }
-    
-    ComboFiles.Delete()
-    if (files.Length > 0)
-        ComboFiles.Add(files)
-        
-    SplitPath(IniFile, &OutFileName)
-    ComboFiles.Text := OutFileName
-}
-
-ClearAllHotkeys() {
-    global MacroList, QuickCastList, GameExe
-    for name, data in MacroList {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(data.Key, "Off")
-            HotIfWinActive()
-        }
-    }
-    for slot, keybind in QuickCastList {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(keybind, "Off")
-            HotIfWinActive()
-        }
-    }
-    MacroList.Clear()
-    QuickCastList.Clear()
-}
-
-LoadOrCreateProfile(*) {
-    global IniFile, MasterIni, ComboFiles, ConfigDir
-    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
-    
-    selected := ComboFiles.Text
-    if (selected == "")
-        return
-        
-    if !RegExMatch(selected, "\.ini$")
-        selected .= ".ini"
-        
-    ClearAllHotkeys()
-    
-    IniFile := ConfigDir "\" selected
-    IniWrite(IniFile, MasterIni, "System", "LastProfile")
-    
-    LoadSettings()
-    UpdateFileDropdown()
-    UpdateDropdown()
-    UpdateQCGUI()
-    
-    ; Auto clear input fields when loading new profile
-    ComboName.Text := ""
-    EditKey.Value := ""
-    EditPreKey.Value := ""
-    ChkNoRet.Value := 0
-    DDL_ExecMode.Choose(1)
-    
-    MsgBox("Profile [" selected "] is now active!", "Profile Switched", 64)
-}
-
-ImportProfile(*) {
-    global ConfigDir, MasterIni, IniFile
-    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
-
-    ; Open Windows File Explorer dialog
-    SelectedFile := FileSelect(3, "", "Select Configuration File to Import", "INI Files (*.ini)")
-    if (SelectedFile == "")
-        return ; User cancelled the dialog
-
-    SplitPath SelectedFile, &OutFileName
-    DestPath := ConfigDir "\" OutFileName
-
-    ; Check if the file is already inside the saved binds folder
-    if (SelectedFile != DestPath) {
-        try {
-            FileCopy SelectedFile, DestPath, 1 ; 1 = overwrite if exists
-        } catch {
-            MsgBox("Failed to import the file. Please check file permissions.", "File Error", 48)
-            return
-        }
-    }
-
-    ClearAllHotkeys()
-    
-    IniFile := DestPath
-    IniWrite(IniFile, MasterIni, "System", "LastProfile")
-
-    LoadSettings()
-    UpdateFileDropdown()
-    UpdateDropdown()
-    UpdateQCGUI()
-
-    ; Auto clear input fields
-    ComboName.Text := ""
-    EditKey.Value := ""
-    EditPreKey.Value := ""
-    ChkNoRet.Value := 0
-    DDL_ExecMode.Choose(1)
-
-    MsgBox("Profile [" OutFileName "] successfully imported and activated!", "Import Success", 64)
-}
-
-
-; =====================================================================
-; --- KEYBIND CONFLICT CHECKER (ANTI DOUBLE-BIND) ---
-; =====================================================================
-CheckKeybindConflict(CheckKey, ExcludeMacro := "", ExcludeQC := 0) {
-    global MacroList, QuickCastList
-    for name, data in MacroList {
-        if (name != ExcludeMacro && data.Key = CheckKey)
-            return "Targeted Macro: " name
-    }
-    for slot, keybind in QuickCastList {
-        if (slot != ExcludeQC && keybind = CheckKey)
-            return "Quick Cast Slot: " slot
-    }
-    return ""
-}
-
-
-; =====================================================================
 ; --- GUI SUPPORT FUNCTIONS (TARGETED MACRO) ---
-; =====================================================================
+
 ToggleTooltipSave(*) {
-    global EnableTooltip, MasterIni, ChkTooltip
+    global EnableTooltip, IniFile
     EnableTooltip := ChkTooltip.Value
-    IniWrite(EnableTooltip, MasterIni, "Preferences", "ShowTooltip")
+    IniWrite(EnableTooltip, IniFile, "Settings", "ShowTooltip")
 }
 
 AutoFillMacro(*) {
@@ -257,28 +109,28 @@ AutoFillMacro(*) {
 }
 
 SaveChanges(*) {
-    global MacroList, ComboName, EditKey, EditPreKey, DDL_ExecMode, ChkNoRet, IniFile, GameExe
+    global MacroList, ComboName, EditKey, EditPreKey, DDL_ExecMode, ChkNoRet, IniFile
     name := ComboName.Text
-    newKey := EditKey.Value
     
-    if (name == "" || newKey == "") {
-        MsgBox("Profile name and trigger keybind cannot be empty!", "Validation Error", 48)
+    if (name == "") {
+        MsgBox("Profile name cannot be empty!", "Validation Error", 48)
         return
     }
+    
     if !MacroList.Has(name) {
-        MsgBox("Profile '" name "' lacks recorded coordinates!`nPlease use the [Create New] button to record the target position first.", "Warning", 48)
+        MsgBox("Profile '" name "' lacks recorded coordinates!`nPlease use the [Create New / Overwrite Coordinates] button to record the target position first.", "Warning", 48)
         return
     }
     
-    conflict := CheckKeybindConflict(newKey, name)
-    if (conflict != "") {
-        MsgBox("Keybind '" newKey "' is already in use by [" conflict "]!", "Duplicate Keybind", 48)
-        return
-    }
-    
+    newKey := EditKey.Value
     newPreKey := EditPreKey.Value
     newMode := RegExReplace(DDL_ExecMode.Text, " \(.*", "")
     newNoRet := ChkNoRet.Value
+    
+    if (newKey == "") {
+        MsgBox("Trigger keybind cannot be empty!", "Validation Error", 48)
+        return
+    }
     
     oldKey := MacroList[name].Key
     if (oldKey != newKey) {
@@ -301,12 +153,11 @@ SaveChanges(*) {
     
     RegisterHotkey(newKey, name)
     UpdateDropdown()
-    MsgBox("Settings for profile '" name "' saved successfully!", "Success", 64)
+    MsgBox("Settings for profile '" name "' saved successfully (Coordinates preserved)!", "Success", 64)
 }
 
 TriggerRecord(*) {
-    global IsRecording, TempName, TempKey, TempPreKey, TempMode, TempNoRet, BtnRecord, ComboName, EditKey, EditPreKey, DDL_ExecMode, ChkNoRet
-    
+    global IsRecording, TempName, TempKey, TempPreKey, TempMode, TempNoRet, BtnRecord, ComboName
     if (IsRecording) {
         IsRecording := false
         BtnRecord.Text := "Create New / Overwrite Coordinates (/)" 
@@ -317,32 +168,25 @@ TriggerRecord(*) {
     
     TempName := ComboName.Text
     TempKey := EditKey.Value
+    TempPreKey := EditPreKey.Value
+    TempMode := DDL_ExecMode.Text
+    TempNoRet := ChkNoRet.Value
     
     if (TempName == "" || TempKey == "") {
         MsgBox("Profile Name and Trigger Keybind cannot be empty!", "Validation Error", 48)
         return
     }
     
-    conflict := CheckKeybindConflict(TempKey, TempName)
-    if (conflict != "") {
-        MsgBox("Keybind '" TempKey "' is already in use by [" conflict "]!", "Duplicate Keybind", 48)
-        return
-    }
-    
-    TempPreKey := EditPreKey.Value
-    TempMode := DDL_ExecMode.Text
-    TempNoRet := ChkNoRet.Value
-    
     IsRecording := true
     BtnRecord.Text := "Cancel Recording (Click Again)"
     ToolTip("Switch to game! Hover over the target, then press [/] to lock coordinates.")
 }
 
+; Coordinate Registration Hotkey
 #HotIf IsRecording
 $/:: {
     global IsRecording, TempName, TempKey, TempPreKey, TempMode, TempNoRet
     global MacroList, GameExe, IniFile, BtnRecord
-    
     IsRecording := false
     BtnRecord.Text := "Create New / Overwrite Coordinates (/)"
     ToolTip()
@@ -403,37 +247,12 @@ DeleteMacro(*) {
     UpdateDropdown()
 }
 
-; =====================================================================
 ; --- QUICK CAST SUPPORT FUNCTIONS ---
-; =====================================================================
 SaveQuickCast(*) {
     global IniFile, QuickCastList, GameExe
     global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5
     
     newData := [QCEdit1.Value, QCEdit2.Value, QCEdit3.Value, QCEdit4.Value, QCEdit5.Value]
-    
-    Loop 5 {
-        i := A_Index
-        if (newData[i] == "")
-            continue
-        Loop 5 {
-            j := A_Index
-            if (i != j && newData[i] == newData[j]) {
-                MsgBox("Duplicate keybind '" newData[i] "' found in Quick Cast Slots " i " and " j "!", "Validation Error", 48)
-                return
-            }
-        }
-    }
-    
-    Loop 5 {
-        if (newData[A_Index] == "")
-            continue
-        conflict := CheckKeybindConflict(newData[A_Index], "", A_Index)
-        if (conflict != "") {
-            MsgBox("Keybind '" newData[A_Index] "' in Quick Cast Slot " A_Index " is already in use by [" conflict "]!", "Duplicate Keybind", 48)
-            return
-        }
-    }
     
     for slot, keybind in QuickCastList {
         try {
@@ -475,14 +294,14 @@ UpdateQCGUI() {
     try QCEdit5.Value := QuickCastList.Has(5) ? QuickCastList[5] : ""
 }
 
-; =====================================================================
 ; --- CONFIGURATION LOADER ---
-; =====================================================================
 LoadSettings() {
-    global IniFile, MacroList, QuickCastList
+    global IniFile, MacroList, QuickCastList, EnableTooltip
     if !FileExist(IniFile)
         return
         
+    EnableTooltip := IniRead(IniFile, "Settings", "ShowTooltip", 1)
+    
     Loop 5 {
         kb := IniRead(IniFile, "QuickCast", "Slot" A_Index, "")
         if (kb != "") {
@@ -524,9 +343,7 @@ RegisterHotkey(TriggerKey, ProfileName) {
     }
 }
 
-; =====================================================================
 ; --- EXECUTION LOGIC: QUICK CAST (CURSOR-BOUND) ---
-; =====================================================================
 ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     global GameExe, EnableTooltip
     if !WinActive(GameExe)
@@ -551,9 +368,7 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     }
 }
 
-; =====================================================================
 ; --- EXECUTION LOGIC: TARGETED MACRO ---
-; =====================================================================
 ExecuteMacro(ProfileName, TriggerKeyName) {
     global MacroList, GameExe, EnableTooltip
     if !WinActive(GameExe)
@@ -562,6 +377,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     data := MacroList[ProfileName]
     WinGetClientPos ,, &CurrentW, &CurrentH, GameExe
     
+    ; Fixed Vertical FOV Calculation
     Scale := CurrentH / data.BaseH
     TargetY := data.Y * Scale
     CenterX := CurrentW / 2
@@ -636,5 +452,4 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
 ; =====================================================================
 #HotIf WinActive(GameExe)
 Space::s
-r::a
 #HotIf
