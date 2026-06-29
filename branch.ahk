@@ -6,9 +6,8 @@ CoordMode "Mouse", "Client"
 ; --- GLOBAL VARIABLES & FOLDER MANAGEMENT ---
 global ConfigDir := A_ScriptDir "\saved binds"
 
-if !DirExist(ConfigDir) {
+if !DirExist(ConfigDir)
     DirCreate(ConfigDir)
-}
 
 global MasterIni := ConfigDir "\settings.ini"
 global GameExe := "ahk_exe BlueArchive.exe"
@@ -19,8 +18,9 @@ global TempName := "", TempKey := "", TempPreKey := ""
 global TempMode := "Normal", TempNoRet := 0
 
 ; Extra Features Variables
-global QC_SpamA := 0
-global QC_InstaPause := ""
+global EnableSpamA := 0
+global SpamABind := "a"
+global InstPauseBind := ""
 
 ; Load global preferences and determine which profile to open
 global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
@@ -46,19 +46,19 @@ BtnImport.OnEvent("Click", ImportProfile)
 MyGui.Add("GroupBox", "xm w270 h250", "Targeted Macro (Coordinate-Locked)")
 MyGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
 
-ComboName := MyGui.Add("ComboBox", "w250 vMacroName", [])
+global ComboName := MyGui.Add("ComboBox", "w250 vMacroName", [])
 ComboName.OnEvent("Change", AutoFillMacro)
 
 MyGui.Add("Text", "w115", "Trigger Keybind:")
-EditKey := MyGui.Add("Edit", "w115 vKeybind", "F3")
+global EditKey := MyGui.Add("Edit", "w115 vKeybind", "F3")
 
 MyGui.Add("Text", "x+10 yp w115", "Pre-Key (Optional):")
-EditPreKey := MyGui.Add("Edit", "w115 vPreKey", "")
+global EditPreKey := MyGui.Add("Edit", "w115 vPreKey", "")
 
 MyGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
-DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Turbo)"])
+global DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Turbo)"])
 
-ChkNoRet := MyGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
+global ChkNoRet := MyGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
 
 BtnSaveEdit := MyGui.Add("Button", "xm+10 y+10 w250 h26", "Save Profile Settings (Preserve Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
@@ -68,37 +68,38 @@ BtnRecord.OnEvent("Click", TriggerRecord)
 
 ; PANEL 2: Active Targeted Macros
 MyGui.Add("GroupBox", "xm w270 h90", "Active Targeted Macros")
-DDL_Macro := MyGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
+global DDL_Macro := MyGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
 
 BtnDelete := MyGui.Add("Button", "w250", "Delete Selected Macro")
 BtnDelete.OnEvent("Click", DeleteMacro)
 
 ; PANEL 3: Quick Cast & Extra Features
-MyGui.Add("GroupBox", "xm w270 h200", "Quick Cast & Extra Features")
+MyGui.Add("GroupBox", "xm w270 h195", "Quick Cast & Extra Features")
 MyGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
-QCEdit1 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
+global QCEdit1 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
 MyGui.Add("Text", "x+10 yp+2 w60", "Slot 2:")
-QCEdit2 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC2", "")
+global QCEdit2 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC2", "")
 
-MyGui.Add("Text", "xm+10 y+8 w60", "Slot 3:")
-QCEdit3 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC3", "")
+MyGui.Add("Text", "xm+10 y+10 w60", "Slot 3:")
+global QCEdit3 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC3", "")
 MyGui.Add("Text", "x+10 yp+2 w60", "Slot 4:")
-QCEdit4 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
+global QCEdit4 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
 
-MyGui.Add("Text", "xm+10 y+8 w60", "Slot 5:")
-QCEdit5 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
+MyGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
+global QCEdit5 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
 
-; Extra Features
-global ChkSpamA := MyGui.Add("CheckBox", "xm+10 y+10 vSpamA Checked" QC_SpamA, "Enable 'A' Key Spam (Trigger: A)")
-MyGui.Add("Text", "xm+10 y+8 w110", "Instant Pause Bind:")
-global EditInstaPause := MyGui.Add("Edit", "x+5 yp-2 w55 vInstaPause", QC_InstaPause)
+global ChkSpamA := MyGui.Add("CheckBox", "xm+10 y+15 vEnableSpamA Checked" EnableSpamA, "Enable 'A' Key Spam. Trigger:")
+global EditSpamA := MyGui.Add("Edit", "x+5 yp-2 w45 vSpamABind", SpamABind)
 
-BtnSaveQC := MyGui.Add("Button", "xm+10 y+10 w250 h26", "Save Quick Cast & Extra Binds")
+MyGui.Add("Text", "xm+10 y+12 w120", "Instant Pause Bind:")
+global EditInstPause := MyGui.Add("Edit", "x+5 yp-2 w45 vInstPauseBind", InstPauseBind)
+
+BtnSaveQC := MyGui.Add("Button", "xm+10 y+15 w250 h26", "Save Quick Cast & Extra Binds")
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
 ; PANEL 4: Global Preferences (settings.ini)
 MyGui.Add("GroupBox", "xm w270 h80", "Global Preferences (settings.ini)")
-ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
+global ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
 
 MyGui.Add("Text", "xm+10 y+10 w140", "Spam / Turbo Delay (ms):")
@@ -118,55 +119,42 @@ MyGui.Show("w290")
 UpdateFileDropdown() {
     global ComboFiles, IniFile, ConfigDir
     files := []
+    
     Loop Files ConfigDir "\*.ini" {
-        if (A_LoopFileName != "settings.ini") {
+        if (A_LoopFileName != "settings.ini")
             files.Push(A_LoopFileName)
-        }
     }
+    
     ComboFiles.Delete()
-    if (files.Length > 0) {
+    if (files.Length > 0)
         ComboFiles.Add(files)
-    }
+        
     SplitPath(IniFile, &OutFileName)
     ComboFiles.Text := OutFileName
 }
 
 ClearAllHotkeys() {
-    global MacroList, QuickCastList, GameExe, QC_SpamA, QC_InstaPause
-    
+    global MacroList, QuickCastList, GameExe
+    global EnableSpamA, SpamABind, InstPauseBind
+
     for name, data in MacroList {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(data.Key, "Off")
-            HotIfWinActive()
-        }
+        try { HotIfWinActive(GameExe), Hotkey(data.Key, "Off"), HotIfWinActive() }
     }
     for slot, keybind in QuickCastList {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(keybind, "Off")
-            HotIfWinActive()
-        }
+        try { HotIfWinActive(GameExe), Hotkey(keybind, "Off"), HotIfWinActive() }
     }
-    if (QC_SpamA) {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey("a", "Off")
-            HotIfWinActive()
-        }
+    if (EnableSpamA && SpamABind != "") {
+        try { HotIfWinActive(GameExe), Hotkey(SpamABind, "Off"), HotIfWinActive() }
     }
-    if (QC_InstaPause != "") {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(QC_InstaPause, "Off")
-            HotIfWinActive()
-        }
+    if (InstPauseBind != "") {
+        try { HotIfWinActive(GameExe), Hotkey(InstPauseBind, "Off"), HotIfWinActive() }
     }
-    
+
     MacroList.Clear()
     QuickCastList.Clear()
-    QC_SpamA := 0
-    QC_InstaPause := ""
+    EnableSpamA := 0
+    SpamABind := "a"
+    InstPauseBind := ""
 }
 
 LoadOrCreateProfile(*) {
@@ -174,12 +162,11 @@ LoadOrCreateProfile(*) {
     global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
     
     selected := ComboFiles.Text
-    if (selected == "") {
+    if (selected == "")
         return
-    }
-    if !RegExMatch(selected, "\.ini$") {
+        
+    if !RegExMatch(selected, "\.ini$")
         selected .= ".ini"
-    }
         
     ClearAllHotkeys()
     
@@ -205,15 +192,14 @@ ImportProfile(*) {
     global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
 
     SelectedFile := FileSelect(3, "", "Select Configuration File to Import", "INI Files (*.ini)")
-    if (SelectedFile == "") {
+    if (SelectedFile == "")
         return 
-    }
 
     SplitPath SelectedFile, &OutFileName
     DestPath := ConfigDir "\" OutFileName
 
     if (SelectedFile != DestPath) {
-        try { 
+        try {
             FileCopy SelectedFile, DestPath, 1 
         } catch {
             MsgBox("Failed to import the file. Please check file permissions.", "File Error", 48)
@@ -222,6 +208,7 @@ ImportProfile(*) {
     }
 
     ClearAllHotkeys()
+    
     IniFile := DestPath
     IniWrite(IniFile, MasterIni, "System", "LastProfile")
 
@@ -244,24 +231,20 @@ ImportProfile(*) {
 ; --- KEYBIND CONFLICT CHECKER (ANTI DOUBLE-BIND) ---
 ; =====================================================================
 CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
-    global MacroList, QuickCastList, QC_SpamA, QC_InstaPause
+    global MacroList, QuickCastList, EnableSpamA, SpamABind, InstPauseBind
     
     for name, data in MacroList {
-        if (name != ExcludeMacro && data.Key = CheckKey) {
+        if (name != ExcludeMacro && data.Key = CheckKey)
             return "Targeted Macro: " name
-        }
     }
     for slot, keybind in QuickCastList {
-        if (keybind = CheckKey) {
+        if (keybind = CheckKey)
             return "Quick Cast Slot: " slot
-        }
     }
-    if (QC_SpamA && (CheckKey = "a")) {
-        return "Spam A Toggle"
-    }
-    if (QC_InstaPause != "" && QC_InstaPause = CheckKey) {
-        return "Instant Pause"
-    }
+    if (EnableSpamA && SpamABind = CheckKey)
+        return "Extra Feature: Spam A"
+    if (InstPauseBind != "" && InstPauseBind = CheckKey)
+        return "Extra Feature: Instant Pause"
         
     return ""
 }
@@ -288,18 +271,19 @@ SaveSpamDelay(*) {
 AutoFillMacro(*) {
     global MacroList, ComboName, EditKey, EditPreKey, DDL_ExecMode, ChkNoRet
     name := ComboName.Text
+    
     if MacroList.Has(name) {
         data := MacroList[name]
         EditKey.Value := data.Key
         EditPreKey.Value := data.PreKey
         ChkNoRet.Value := data.NoRet
-        if (data.Mode == "Normal") {
+        
+        if (data.Mode == "Normal")
             DDL_ExecMode.Choose(1)
-        } else if (data.Mode == "Hold") {
+        else if (data.Mode == "Hold")
             DDL_ExecMode.Choose(2)
-        } else if (data.Mode == "Spam") {
+        else if (data.Mode == "Spam")
             DDL_ExecMode.Choose(3)
-        }
     }
 }
 
@@ -313,7 +297,7 @@ SaveChanges(*) {
         return
     }
     if !MacroList.Has(name) {
-        MsgBox("Profile '" name "' lacks recorded coordinates!`nPlease use [Create New] first.", "Warning", 48)
+        MsgBox("Profile '" name "' lacks recorded coordinates!`nPlease use the [Create New] button to record the target position first.", "Warning", 48)
         return
     }
     
@@ -326,14 +310,10 @@ SaveChanges(*) {
     newPreKey := EditPreKey.Value
     newMode := RegExReplace(DDL_ExecMode.Text, " \(.*", "")
     newNoRet := ChkNoRet.Value
-    oldKey := MacroList[name].Key
     
+    oldKey := MacroList[name].Key
     if (oldKey != newKey) {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(oldKey, "Off")
-            HotIfWinActive()
-        }
+        try { HotIfWinActive(GameExe), Hotkey(oldKey, "Off"), HotIfWinActive() }
     }
     
     MacroList[name].Key := newKey
@@ -364,6 +344,7 @@ TriggerRecord(*) {
     
     TempName := ComboName.Text
     TempKey := EditKey.Value
+    
     if (TempName == "" || TempKey == "") {
         MsgBox("Profile Name and Trigger Keybind cannot be empty!", "Validation Error", 48)
         return
@@ -438,101 +419,78 @@ UpdateDropdown() {
 
 DeleteMacro(*) {
     global MacroList, DDL_Macro, IniFile, GameExe
-    if (DDL_Macro.Text == "") {
+    if (DDL_Macro.Text == "")
         return
-    }
     
     ActualName := RegExReplace(DDL_Macro.Text, "^(\[.*?\]\s*)*", "")
     ActualName := RegExReplace(ActualName, " \(.*", "")
     
-    try {
-        HotIfWinActive(GameExe)
-        Hotkey(MacroList[ActualName].Key, "Off")
-        HotIfWinActive()
-    }
+    try { HotIfWinActive(GameExe), Hotkey(MacroList[ActualName].Key, "Off"), HotIfWinActive() }
+    
     MacroList.Delete(ActualName)
     IniDelete(IniFile, ActualName)
     UpdateDropdown()
 }
-
 
 ; =====================================================================
 ; --- QUICK CAST & EXTRA FEATURES SUPPORT FUNCTIONS ---
 ; =====================================================================
 SaveQuickCast(*) {
     global IniFile, QuickCastList, GameExe, MacroList
-    global QC_SpamA, QC_InstaPause
-    global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5, ChkSpamA, EditInstaPause
+    global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5
+    global ChkSpamA, EditSpamA, EditInstPause
+    global EnableSpamA, SpamABind, InstPauseBind
     
     newData := [QCEdit1.Value, QCEdit2.Value, QCEdit3.Value, QCEdit4.Value, QCEdit5.Value]
-    newSpamA := ChkSpamA.Value
-    newInstaPause := EditInstaPause.Value
+    newSpamAEnabled := ChkSpamA.Value
+    newSpamABind := EditSpamA.Value
+    newInstPauseBind := EditInstPause.Value
     
-    ; 1. Gather keys and check for internal duplicates inside Panel 3
-    bindsMap := Map()
-    bindsMap.CaseSense := "Off" 
-    
-    if (newSpamA) {
-        bindsMap["a"] := "Spam A Toggle"
-    }
-        
-    if (newInstaPause != "") {
-        if bindsMap.Has(newInstaPause) {
-            MsgBox("Duplicate keybind '" newInstaPause "' found inside Quick Cast panel!", "Validation Error", 48)
-            return
-        }
-        bindsMap[newInstaPause] := "Instant Pause"
-    }
+    CheckList := Map()
     
     Loop 5 {
-        val := newData[A_Index]
-        if (val != "") {
-            if bindsMap.Has(val) {
-                MsgBox("Duplicate keybind '" val "' found inside Quick Cast panel!", "Validation Error", 48)
+        if (newData[A_Index] != "")
+            CheckList["QC Slot " A_Index] := newData[A_Index]
+    }
+    if (newSpamAEnabled && newSpamABind != "")
+        CheckList["Spam A"] := newSpamABind
+    if (newInstPauseBind != "")
+        CheckList["Instant Pause"] := newInstPauseBind
+        
+    ; 1. Internal duplication check
+    for label1, key1 in CheckList {
+        for label2, key2 in CheckList {
+            if (label1 != label2 && key1 == key2) {
+                MsgBox("Duplicate keybind '" key1 "' found between [" label1 "] and [" label2 "]!", "Validation Error", 48)
                 return
             }
-            bindsMap[val] := "Quick Cast Slot " A_Index
         }
     }
     
-    ; 2. Check globally against Targeted Macros
-    for key, desc in bindsMap {
+    ; 2. Global conflicts (Check against Targeted Macros)
+    for label, key in CheckList {
         for name, data in MacroList {
-            if (data.Key = key) {
-                MsgBox("Keybind '" key "' for [" desc "] is already in use by [Targeted Macro: " name "]!", "Duplicate Keybind Detected", 48)
+            if (data.Key == key) {
+                MsgBox("Keybind '" key "' for [" label "] is already in use by [Targeted Macro: " name "]!", "Duplicate Keybind", 48)
                 return
             }
         }
     }
     
-    ; 3. Turn off old Quick Cast & Extra hotkeys safely
+    ; 3. Turn off old hotkeys safely
     for slot, keybind in QuickCastList {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(keybind, "Off")
-            HotIfWinActive()
-        }
+        try { HotIfWinActive(GameExe), Hotkey(keybind, "Off"), HotIfWinActive() }
     }
-    if (QC_SpamA) {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey("a", "Off")
-            HotIfWinActive()
-        }
+    if (EnableSpamA && SpamABind != "") {
+        try { HotIfWinActive(GameExe), Hotkey(SpamABind, "Off"), HotIfWinActive() }
     }
-    if (QC_InstaPause != "") {
-        try {
-            HotIfWinActive(GameExe)
-            Hotkey(QC_InstaPause, "Off")
-            HotIfWinActive()
-        }
+    if (InstPauseBind != "") {
+        try { HotIfWinActive(GameExe), Hotkey(InstPauseBind, "Off"), HotIfWinActive() }
     }
     
     QuickCastList.Clear()
-    QC_SpamA := newSpamA
-    QC_InstaPause := newInstaPause
     
-    ; 4. Save and Register new hotkeys
+    ; 4. Save and Register new QC hotkeys
     Loop 5 {
         kb := newData[A_Index]
         IniWrite(kb, IniFile, "QuickCast", "Slot" A_Index)
@@ -542,15 +500,19 @@ SaveQuickCast(*) {
         }
     }
     
-    IniWrite(QC_SpamA, IniFile, "QuickCast", "SpamA")
-    IniWrite(QC_InstaPause, IniFile, "QuickCast", "InstaPause")
+    ; 5. Save and Register Extra Features
+    EnableSpamA := newSpamAEnabled
+    SpamABind := newSpamABind
+    InstPauseBind := newInstPauseBind
     
-    if (QC_SpamA) {
-        RegisterQC_SpamA()
-    }
-    if (QC_InstaPause != "") {
-        RegisterQC_InstaPause(QC_InstaPause)
-    }
+    IniWrite(EnableSpamA, IniFile, "ExtraFeatures", "EnableSpamA")
+    IniWrite(SpamABind, IniFile, "ExtraFeatures", "SpamABind")
+    IniWrite(InstPauseBind, IniFile, "ExtraFeatures", "InstPauseBind")
+    
+    if (EnableSpamA && SpamABind != "")
+        RegisterExtra_Hotkey(SpamABind, "SpamA")
+    if (InstPauseBind != "")
+        RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
     MsgBox("Quick Cast & Extra keybinds saved successfully!", "Success", 64)
 }
@@ -562,55 +524,51 @@ RegisterQC_Hotkey(TriggerKey, Slot) {
         Hotkey(TriggerKey, (KeyName) => ExecuteQuickCast(Slot, KeyName), "On")
         HotIfWinActive()
     } catch {
-        MsgBox("Invalid keybind format '" TriggerKey "' for Slot " Slot "!", "Hotkey Error", 48)
+        MsgBox("Invalid keybind format '" TriggerKey "' for QC Slot " Slot "!", "Hotkey Error", 48)
     }
 }
 
-RegisterQC_SpamA() {
+RegisterExtra_Hotkey(TriggerKey, FeatureType) {
     global GameExe
     try {
         HotIfWinActive(GameExe)
-        Hotkey("a", (KeyName) => ExecuteSpamA(KeyName), "On")
+        if (FeatureType == "SpamA")
+            Hotkey(TriggerKey, (KeyName) => ExecuteSpamA(KeyName), "On")
+        else if (FeatureType == "InstPause")
+            Hotkey(TriggerKey, (KeyName) => ExecuteInstPause(KeyName), "On")
         HotIfWinActive()
     } catch {
-        MsgBox("Failed to register 'A' key for Spam Toggle!", "Hotkey Error", 48)
-    }
-}
-
-RegisterQC_InstaPause(TriggerKey) {
-    global GameExe
-    try {
-        HotIfWinActive(GameExe)
-        Hotkey(TriggerKey, (KeyName) => ExecuteInstaPause(KeyName), "On")
-        HotIfWinActive()
-    } catch {
-        MsgBox("Invalid keybind format '" TriggerKey "' for Instant Pause!", "Hotkey Error", 48)
+        MsgBox("Invalid keybind format '" TriggerKey "' for Extra Feature: " FeatureType "!", "Hotkey Error", 48)
     }
 }
 
 UpdateQCGUI() {
-    global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5, ChkSpamA, EditInstaPause
-    global QuickCastList, QC_SpamA, QC_InstaPause
+    global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5, QuickCastList
+    global ChkSpamA, EditSpamA, EditInstPause
+    global EnableSpamA, SpamABind, InstPauseBind
     
     try QCEdit1.Value := QuickCastList.Has(1) ? QuickCastList[1] : ""
     try QCEdit2.Value := QuickCastList.Has(2) ? QuickCastList[2] : ""
     try QCEdit3.Value := QuickCastList.Has(3) ? QuickCastList[3] : ""
     try QCEdit4.Value := QuickCastList.Has(4) ? QuickCastList[4] : ""
     try QCEdit5.Value := QuickCastList.Has(5) ? QuickCastList[5] : ""
-    try ChkSpamA.Value := QC_SpamA
-    try EditInstaPause.Value := QC_InstaPause
+    
+    try ChkSpamA.Value := EnableSpamA
+    try EditSpamA.Value := SpamABind
+    try EditInstPause.Value := InstPauseBind
 }
 
 ; =====================================================================
 ; --- CONFIGURATION LOADER ---
 ; =====================================================================
 LoadSettings() {
-    global IniFile, MacroList, QuickCastList, QC_SpamA, QC_InstaPause
-    if !FileExist(IniFile) {
+    global IniFile, MacroList, QuickCastList
+    global EnableSpamA, SpamABind, InstPauseBind
+    
+    if !FileExist(IniFile)
         return
-    }
         
-    ; Load Quick Cast
+    ; Load QC Binds
     Loop 5 {
         kb := IniRead(IniFile, "QuickCast", "Slot" A_Index, "")
         if (kb != "") {
@@ -619,26 +577,24 @@ LoadSettings() {
         }
     }
     
-    ; Load Extra Features
-    QC_SpamA := IniRead(IniFile, "QuickCast", "SpamA", 0)
-    QC_InstaPause := IniRead(IniFile, "QuickCast", "InstaPause", "")
+    ; Load Extra Binds
+    EnableSpamA := IniRead(IniFile, "ExtraFeatures", "EnableSpamA", 0)
+    SpamABind := IniRead(IniFile, "ExtraFeatures", "SpamABind", "a")
+    InstPauseBind := IniRead(IniFile, "ExtraFeatures", "InstPauseBind", "")
     
-    if (QC_SpamA) {
-        RegisterQC_SpamA()
-    }
-    if (QC_InstaPause != "") {
-        RegisterQC_InstaPause(QC_InstaPause)
-    }
+    if (EnableSpamA && SpamABind != "")
+        RegisterExtra_Hotkey(SpamABind, "SpamA")
+    if (InstPauseBind != "")
+        RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
-    ; Load Targeted Macros
+    ; Load Target Macros
     try {
         FormatINI := FileRead(IniFile)
         Loop Parse, FormatINI, "`n", "`r" {
             if (RegExMatch(A_LoopField, "^\[(.*)\]$", &Match)) {
                 Section := Match[1]
-                if (Section == "" || Section == "Settings" || Section == "QuickCast") {
+                if (Section == "" || Section == "Settings" || Section == "QuickCast" || Section == "ExtraFeatures")
                     continue
-                }
                 
                 k := IniRead(IniFile, Section, "Key")
                 pk := IniRead(IniFile, Section, "PreKey", "")
@@ -666,44 +622,41 @@ RegisterHotkey(TriggerKey, ProfileName) {
 }
 
 ; =====================================================================
-; --- EXECUTION LOGIC: EXTRA FEATURES (SPAM A & INSTA PAUSE) ---
+; --- EXECUTION LOGIC: EXTRA FEATURES ---
 ; =====================================================================
 ExecuteSpamA(TriggerKeyName) {
     global GameExe, EnableTooltip, SpamDelay
-    if !WinActive(GameExe) {
+    if !WinActive(GameExe)
         return
-    }
         
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
     
-    if (EnableTooltip) {
-        ToolTip("Extra Feature Active: Spam 'A' Key")
-    }
+    if (EnableTooltip)
+        ToolTip("Spamming 'A' Key...")
         
     while GetKeyState(BaseKey, "P") {
         SendEvent("{a}")
         Sleep SpamDelay
     }
     
-    if (EnableTooltip) {
-        ToolTip()
-    }
+    if (EnableTooltip)
+        ToolTip() 
 }
 
-ExecuteInstaPause(TriggerKeyName) {
+ExecuteInstPause(TriggerKeyName) {
     global GameExe, EnableTooltip
-    if !WinActive(GameExe) {
+    if !WinActive(GameExe)
         return
-    }
         
-    if (EnableTooltip) {
-        ToolTip("Macro Executed: Instant Pause")
-        SetTimer () => ToolTip(), -1000
-    }
-    
+    if (EnableTooltip)
+        ToolTip("Instant Pause Executed")
+        
     Click
     Sleep 25
     SendEvent("{Esc}")
+    
+    if (EnableTooltip)
+        SetTimer () => ToolTip(), -1000
 }
 
 ; =====================================================================
@@ -711,9 +664,8 @@ ExecuteInstaPause(TriggerKeyName) {
 ; =====================================================================
 ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     global GameExe, EnableTooltip, SpamDelay
-    if !WinActive(GameExe) {
+    if !WinActive(GameExe)
         return
-    }
         
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
     ActualPreKey := String(SlotPreKey)
@@ -726,7 +678,7 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
         SendEvent("{" ActualPreKey "}")
         Sleep 15
         Click
-        Sleep SpamDelay
+        Sleep SpamDelay 
     }
     
     if (EnableTooltip) {
@@ -739,9 +691,8 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
 ; =====================================================================
 ExecuteMacro(ProfileName, TriggerKeyName) {
     global MacroList, GameExe, EnableTooltip, SpamDelay
-    if !WinActive(GameExe) {
+    if !WinActive(GameExe)
         return
-    }
         
     data := MacroList[ProfileName]
     WinGetClientPos ,, &CurrentW, &CurrentH, GameExe
@@ -752,9 +703,8 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     DistXFromCenter := data.X - (data.BaseW / 2)
     TargetX := CenterX + (DistXFromCenter * Scale)
     
-    if (!data.NoRet) {
+    if (!data.NoRet)
         MouseGetPos &OriginX, &OriginY
-    }
         
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
 
@@ -790,9 +740,8 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     }
     
     Sleep 30
-    if (!data.NoRet) {
+    if (!data.NoRet)
         MouseMove OriginX, OriginY, 0
-    }
     
     if (EnableTooltip) {
         ToolTip("Macro Executed: " ProfileName)
@@ -806,11 +755,10 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
 #SuspendExempt
 >+Esc:: {
     Suspend(-1)
-    if (A_IsSuspended) {
+    if (A_IsSuspended)
         ToolTip("Macro System: PAUSED (Safe to type)")
-    } else {
+    else
         ToolTip("Macro System: RESUMED (Active)")
-    }
     SetTimer () => ToolTip(), -2000
 }
 >+/:: {
