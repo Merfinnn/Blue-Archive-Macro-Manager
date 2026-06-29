@@ -88,7 +88,8 @@ global QCEdit4 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
 MyGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
 global QCEdit5 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
 
-global ChkSpamA := MyGui.Add("CheckBox", "xm+10 y+15 vEnableSpamA Checked" EnableSpamA, "Enable 'A' Key Spam. Trigger:")
+global ChkSpamA := MyGui.Add("CheckBox", "xm+10 y+15 vEnableSpamA", "Enable 'A' Key Spam. Trigger:")
+ChkSpamA.Value := EnableSpamA
 global EditSpamA := MyGui.Add("Edit", "x+5 yp-2 w45 vSpamABind", SpamABind)
 
 MyGui.Add("Text", "xm+10 y+12 w120", "Instant Pause Bind:")
@@ -99,7 +100,8 @@ BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
 ; PANEL 4: Global Preferences (settings.ini)
 MyGui.Add("GroupBox", "xm w270 h80", "Global Preferences (settings.ini)")
-global ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
+global ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip", "Enable OSD Notifications (Tooltips)")
+ChkTooltip.Value := EnableTooltip
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
 
 MyGui.Add("Text", "xm+10 y+10 w140", "Spam / Turbo Delay (ms):")
@@ -234,16 +236,16 @@ CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
     global MacroList, QuickCastList, EnableSpamA, SpamABind, InstPauseBind
     
     for name, data in MacroList {
-        if (name != ExcludeMacro && data.Key = CheckKey)
+        if (name != ExcludeMacro && data.Key == CheckKey)
             return "Targeted Macro: " name
     }
     for slot, keybind in QuickCastList {
-        if (keybind = CheckKey)
+        if (keybind == CheckKey)
             return "Quick Cast Slot: " slot
     }
-    if (EnableSpamA && SpamABind = CheckKey)
+    if (EnableSpamA && SpamABind == CheckKey)
         return "Extra Feature: Spam A"
-    if (InstPauseBind != "" && InstPauseBind = CheckKey)
+    if (InstPauseBind != "" && InstPauseBind == CheckKey)
         return "Extra Feature: Instant Pause"
         
     return ""
@@ -338,7 +340,7 @@ TriggerRecord(*) {
         IsRecording := false
         BtnRecord.Text := "Create New / Overwrite Coordinates (/)" 
         ToolTip("Coordinate recording cancelled.")
-        SetTimer () => ToolTip(), -1500
+        SetTimer(() => ToolTip(), -1500)
         return
     }
     
@@ -365,7 +367,7 @@ TriggerRecord(*) {
     ToolTip("Switch to game! Hover over the target, then press [/] to lock coordinates.")
 }
 
-#HotIf IsRecording
+#HotIf (IsRecording)
 $/:: {
     global IsRecording, TempName, TempKey, TempPreKey, TempMode, TempNoRet
     global MacroList, GameExe, IniFile, BtnRecord
@@ -656,7 +658,7 @@ ExecuteInstPause(TriggerKeyName) {
     SendEvent("{Esc}")
     
     if (EnableTooltip)
-        SetTimer () => ToolTip(), -1000
+        SetTimer(() => ToolTip(), -1000)
 }
 
 ; =====================================================================
@@ -745,7 +747,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     
     if (EnableTooltip) {
         ToolTip("Macro Executed: " ProfileName)
-        SetTimer () => ToolTip(), -1000
+        SetTimer(() => ToolTip(), -1000)
     }
 }
 
@@ -759,7 +761,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
         ToolTip("Macro System: PAUSED (Safe to type)")
     else
         ToolTip("Macro System: RESUMED (Active)")
-    SetTimer () => ToolTip(), -2000
+    SetTimer(() => ToolTip(), -2000)
 }
 >+/:: {
     MyGui.Show()
