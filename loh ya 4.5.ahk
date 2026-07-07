@@ -18,109 +18,104 @@ global TempName := "", TempKey := "", TempPreKey := ""
 global TempMode := "Normal", TempNoRet := 0
 
 ; Extra Features Variables
-global EnableRapidA := 0
-global RapidABind := "a"
+global EnableSpamA := 0
+global SpamABind := "a"
 global InstPauseBind := ""
 
 ; Load global preferences from settings.ini
 global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
 global EnableLetterbox := IniRead(MasterIni, "Preferences", "EnableLetterbox", 0) 
-global LoopDelay := IniRead(MasterIni, "Preferences", "LoopDelay", 25)
+global SpamDelay := IniRead(MasterIni, "Preferences", "SpamDelay", 25)
 global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config.ini")
 
 ; --- INITIALIZATION ---
 LoadSettings()
 
 ; --- GUI INTERFACE CREATION ---
-global MainGui := Gui("+AlwaysOnTop", "Blue Archive Macro Manager")
-MainGui.SetFont("s9", "Segoe UI")
+MyGui := Gui("+AlwaysOnTop", "Blue Archive Macro Manager")
+MyGui.SetFont("s9", "Segoe UI")
 
 ; PANEL 0: Profile Management
-MainGui.Add("GroupBox", "w270 h55", "Configuration Profile")
-ComboFiles := MainGui.Add("ComboBox", "xp+10 yp+20 w130", [])
-BtnLoadProfile := MainGui.Add("Button", "x+5 yp-1 w55 h25", "Load")
+MyGui.Add("GroupBox", "w270 h55", "Configuration Profile")
+ComboFiles := MyGui.Add("ComboBox", "xp+10 yp+20 w130", [])
+BtnLoadProfile := MyGui.Add("Button", "x+5 yp-1 w55 h25", "Load")
 BtnLoadProfile.OnEvent("Click", LoadOrCreateProfile)
-BtnImport := MainGui.Add("Button", "x+5 yp w55 h25", "Import")
+BtnImport := MyGui.Add("Button", "x+5 yp w55 h25", "Import")
 BtnImport.OnEvent("Click", ImportProfile)
 
 ; PANEL 1: Targeted Macro (Coordinate-Locked)
-MainGui.Add("GroupBox", "xm w270 h275", "Targeted Macro (Coordinate-Locked)")
-MainGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
+MyGui.Add("GroupBox", "xm w270 h275", "Targeted Macro (Coordinate-Locked)")
+MyGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
 
-global ComboName := MainGui.Add("ComboBox", "w250 vMacroName", [])
+global ComboName := MyGui.Add("ComboBox", "w250 vMacroName", [])
 ComboName.OnEvent("Change", AutoFillMacro)
 
-MainGui.Add("Text", "w115", "Trigger Keybind:")
-global EditKey := MainGui.Add("Edit", "w115 vKeybind", "F3")
+MyGui.Add("Text", "w115", "Trigger Keybind:")
+global EditKey := MyGui.Add("Edit", "w115 vKeybind", "F3")
 
-MainGui.Add("Text", "x+10 yp w115", "Pre-Key (Optional):")
-global EditPreKey := MainGui.Add("Edit", "w115 vPreKey", "")
+MyGui.Add("Text", "x+10 yp w115", "Pre-Key (Optional):")
+global EditPreKey := MyGui.Add("Edit", "w115 vPreKey", "")
 
-MainGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
-global DDL_ExecMode := MainGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Rapid (Turbo)"])
+MyGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
+global DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Turbo)"])
 
-global ChkNoRet := MainGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
-global ChkLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Combat 2.06:1)")
+global ChkNoRet := MyGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
+global ChkLetterbox := MyGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Combat 2.06:1)")
 
-BtnSaveEdit := MainGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Preserve Coordinates)")
+BtnSaveEdit := MyGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Preserve Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
 
-BtnRecord := MainGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
+BtnRecord := MyGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
 BtnRecord.OnEvent("Click", TriggerRecord)
 
 ; PANEL 2: Active Targeted Macros
-MainGui.Add("GroupBox", "xm w270 h90", "Active Targeted Macros")
-global DDL_Macro := MainGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
+MyGui.Add("GroupBox", "xm w270 h90", "Active Targeted Macros")
+global DDL_Macro := MyGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
 
-BtnDelete := MainGui.Add("Button", "w250", "Delete Selected Macro")
+BtnDelete := MyGui.Add("Button", "w250", "Delete Selected Macro")
 BtnDelete.OnEvent("Click", DeleteMacro)
 
 ; PANEL 3: Quick Cast & Extra Features
-MainGui.Add("GroupBox", "xm w270 h195", "Quick Cast & Extra Features")
-MainGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
-global QCEdit1 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
-MainGui.Add("Text", "x+10 yp+2 w60", "Slot 2:")
-global QCEdit2 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC2", "")
+MyGui.Add("GroupBox", "xm w270 h195", "Quick Cast & Extra Features")
+MyGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
+global QCEdit1 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
+MyGui.Add("Text", "x+10 yp+2 w60", "Slot 2:")
+global QCEdit2 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC2", "")
 
-MainGui.Add("Text", "xm+10 y+10 w60", "Slot 3:")
-global QCEdit3 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC3", "")
-MainGui.Add("Text", "x+10 yp+2 w60", "Slot 4:")
-global QCEdit4 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
+MyGui.Add("Text", "xm+10 y+10 w60", "Slot 3:")
+global QCEdit3 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC3", "")
+MyGui.Add("Text", "x+10 yp+2 w60", "Slot 4:")
+global QCEdit4 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
 
-MainGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
-global QCEdit5 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
+MyGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
+global QCEdit5 := MyGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
 
-global ChkRapidA := MainGui.Add("CheckBox", "xm+10 y+15 vEnableRapidA Checked" EnableRapidA, "Enable 'A' Key Rapid. Trigger:")
-global EditRapidA := MainGui.Add("Edit", "x+5 yp-2 w45 vRapidABind", RapidABind)
+global ChkSpamA := MyGui.Add("CheckBox", "xm+10 y+15 vEnableSpamA Checked" EnableSpamA, "Enable 'A' Key Spam. Trigger:")
+global EditSpamA := MyGui.Add("Edit", "x+5 yp-2 w45 vSpamABind", SpamABind)
 
-MainGui.Add("Text", "xm+10 y+12 w120", "Instant Pause Bind:")
-global EditInstPause := MainGui.Add("Edit", "x+5 yp-2 w45 vInstPauseBind", InstPauseBind)
+MyGui.Add("Text", "xm+10 y+12 w120", "Instant Pause Bind:")
+global EditInstPause := MyGui.Add("Edit", "x+5 yp-2 w45 vInstPauseBind", InstPauseBind)
 
-BtnSaveQC := MainGui.Add("Button", "xm+10 y+15 w250 h26", "Save Quick Cast & Extra Binds")
+BtnSaveQC := MyGui.Add("Button", "xm+10 y+15 w250 h26", "Save Quick Cast & Extra Binds")
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
 ; PANEL 4: Global Preferences (settings.ini)
-MainGui.Add("GroupBox", "xm w270 h115", "Global Preferences (settings.ini)")
-global ChkTooltip := MainGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
+MyGui.Add("GroupBox", "xm w270 h105", "Global Preferences (settings.ini)")
+global ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
 
-global ChkGlobalLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vEnableLetterbox Checked" EnableLetterbox, "Enable vertical letterbox projection")
+global ChkGlobalLetterbox := MyGui.Add("CheckBox", "xm+10 y+8 vEnableLetterbox Checked" EnableLetterbox, "Enable vertical letterbox projection")
 ChkGlobalLetterbox.OnEvent("Click", ToggleLetterboxSave)
 
-MainGui.Add("Text", "xm+10 y+10 w140", "Loop / Turbo Delay (ms):")
-global EditLoopDelay := MainGui.Add("Edit", "x+5 yp-2 w60", LoopDelay)
-EditLoopDelay.OnEvent("Change", SaveLoopDelay)
-MainGui.Add("UpDown", "Range10-1000", LoopDelay).OnEvent("Change", SaveLoopDelay)
-
-; --- CREDIT SECTION ---
-MainGui.SetFont("s7 c888888") ; Small and dim gray font
-MainGui.Add("Text", "xm y+10 w255 Right", "Created by Gemini")
-MainGui.SetFont("s9 cDefault") ; Revert back to original font
+MyGui.Add("Text", "xm+10 y+10 w140", "Spam / Turbo Delay (ms):")
+global EditSpamDelay := MyGui.Add("Edit", "x+5 yp-2 w60", SpamDelay)
+EditSpamDelay.OnEvent("Change", SaveSpamDelay)
+MyGui.Add("UpDown", "Range10-1000", SpamDelay).OnEvent("Change", SaveSpamDelay)
 
 UpdateFileDropdown()
 UpdateDropdown()
 UpdateQCGUI()
-MainGui.Show("w290")
+MyGui.Show("w290")
 
 
 ; =====================================================================
@@ -145,7 +140,7 @@ UpdateFileDropdown() {
 
 ClearAllHotkeys() {
     global MacroList, QuickCastList, GameExe
-    global EnableRapidA, RapidABind, InstPauseBind
+    global EnableSpamA, SpamABind, InstPauseBind
 
     for name, data in MacroList {
         try { 
@@ -161,10 +156,10 @@ ClearAllHotkeys() {
             HotIfWinActive() 
         }
     }
-    if (EnableRapidA && RapidABind != "") {
+    if (EnableSpamA && SpamABind != "") {
         try { 
             HotIfWinActive(GameExe)
-            Hotkey(RapidABind, "Off")
+            Hotkey(SpamABind, "Off")
             HotIfWinActive() 
         }
     }
@@ -178,8 +173,8 @@ ClearAllHotkeys() {
 
     MacroList.Clear()
     QuickCastList.Clear()
-    EnableRapidA := 0
-    RapidABind := "a"
+    EnableSpamA := 0
+    SpamABind := "a"
     InstPauseBind := ""
 }
 
@@ -259,7 +254,7 @@ ImportProfile(*) {
 ; --- KEYBIND CONFLICT CHECKER (ANTI DOUBLE-BIND) ---
 ; =====================================================================
 CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
-    global MacroList, QuickCastList, EnableRapidA, RapidABind, InstPauseBind
+    global MacroList, QuickCastList, EnableSpamA, SpamABind, InstPauseBind
     
     for name, data in MacroList {
         if (name != ExcludeMacro && data.Key = CheckKey)
@@ -269,8 +264,8 @@ CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
         if (keybind = CheckKey)
             return "Quick Cast Slot: " slot
     }
-    if (EnableRapidA && RapidABind = CheckKey)
-        return "Extra Feature: Rapid A"
+    if (EnableSpamA && SpamABind = CheckKey)
+        return "Extra Feature: Spam A"
     if (InstPauseBind != "" && InstPauseBind = CheckKey)
         return "Extra Feature: Instant Pause"
         
@@ -293,12 +288,12 @@ ToggleLetterboxSave(*) {
     IniWrite(EnableLetterbox, MasterIni, "Preferences", "EnableLetterbox")
 }
 
-SaveLoopDelay(*) {
-    global LoopDelay, MasterIni, EditLoopDelay
-    val := EditLoopDelay.Value
+SaveSpamDelay(*) {
+    global SpamDelay, MasterIni, EditSpamDelay
+    val := EditSpamDelay.Value
     if (val != "" && IsNumber(val)) {
-        LoopDelay := Integer(val)
-        IniWrite(LoopDelay, MasterIni, "Preferences", "LoopDelay")
+        SpamDelay := Integer(val)
+        IniWrite(SpamDelay, MasterIni, "Preferences", "SpamDelay")
     }
 }
 
@@ -316,7 +311,7 @@ AutoFillMacro(*) {
             DDL_ExecMode.Choose(1)
         else if (data.Mode == "Hold")
             DDL_ExecMode.Choose(2)
-        else if (data.Mode == "Rapid")
+        else if (data.Mode == "Spam")
             DDL_ExecMode.Choose(3)
     }
 }
@@ -422,6 +417,7 @@ $/:: {
     PureMode := RegExReplace(TempMode, " \(.*", "")
     
     ; --- PRECISE MATH LOGIC: NORMALIZATION DURING SAVE ---
+    ; We always normalize coordinates to a 1920x1080 standard 16:9 layout
     if (ChkLetterbox.Value) {
         CombatH := BaseW / 2.0556
         TopBar := (BaseH - CombatH) / 2
@@ -438,6 +434,7 @@ $/:: {
         NormY := PureY / BaseH
     }
     
+    ; Convert back to 1920x1080 basis for standardized storage
     finalX := (1920 / 2) + (NormX * 1080)
     finalY := (1080 / 2) + (NormY * 1080)
     finalBaseW := 1920
@@ -502,12 +499,12 @@ DeleteMacro(*) {
 SaveQuickCast(*) {
     global IniFile, QuickCastList, GameExe, MacroList
     global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5
-    global ChkRapidA, EditRapidA, EditInstPause
-    global EnableRapidA, RapidABind, InstPauseBind
+    global ChkSpamA, EditSpamA, EditInstPause
+    global EnableSpamA, SpamABind, InstPauseBind
     
     newData := [QCEdit1.Value, QCEdit2.Value, QCEdit3.Value, QCEdit4.Value, QCEdit5.Value]
-    newRapidAEnabled := ChkRapidA.Value
-    newRapidABind := EditRapidA.Value
+    newSpamAEnabled := ChkSpamA.Value
+    newSpamABind := EditSpamA.Value
     newInstPauseBind := EditInstPause.Value
     
     CheckList := Map()
@@ -516,8 +513,8 @@ SaveQuickCast(*) {
         if (newData[A_Index] != "")
             CheckList["QC Slot " A_Index] := newData[A_Index]
     }
-    if (newRapidAEnabled && newRapidABind != "")
-        CheckList["Rapid A"] := newRapidABind
+    if (newSpamAEnabled && newSpamABind != "")
+        CheckList["Spam A"] := newSpamABind
     if (newInstPauseBind != "")
         CheckList["Instant Pause"] := newInstPauseBind
         
@@ -546,10 +543,10 @@ SaveQuickCast(*) {
             HotIfWinActive() 
         }
     }
-    if (EnableRapidA && RapidABind != "") {
+    if (EnableSpamA && SpamABind != "") {
         try { 
             HotIfWinActive(GameExe)
-            Hotkey(RapidABind, "Off")
+            Hotkey(SpamABind, "Off")
             HotIfWinActive() 
         }
     }
@@ -572,16 +569,16 @@ SaveQuickCast(*) {
         }
     }
     
-    EnableRapidA := newRapidAEnabled
-    RapidABind := newRapidABind
+    EnableSpamA := newSpamAEnabled
+    SpamABind := newSpamABind
     InstPauseBind := newInstPauseBind
     
-    IniWrite(EnableRapidA, IniFile, "ExtraFeatures", "EnableRapidA")
-    IniWrite(RapidABind, IniFile, "ExtraFeatures", "RapidABind")
+    IniWrite(EnableSpamA, IniFile, "ExtraFeatures", "EnableSpamA")
+    IniWrite(SpamABind, IniFile, "ExtraFeatures", "SpamABind")
     IniWrite(InstPauseBind, IniFile, "ExtraFeatures", "InstPauseBind")
     
-    if (EnableRapidA && RapidABind != "")
-        RegisterExtra_Hotkey(RapidABind, "RapidA")
+    if (EnableSpamA && SpamABind != "")
+        RegisterExtra_Hotkey(SpamABind, "SpamA")
     if (InstPauseBind != "")
         RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
@@ -603,8 +600,8 @@ RegisterExtra_Hotkey(TriggerKey, FeatureType) {
     global GameExe
     try {
         HotIfWinActive(GameExe)
-        if (FeatureType == "RapidA")
-            Hotkey(TriggerKey, (KeyName) => ExecuteRapidA(KeyName), "On")
+        if (FeatureType == "SpamA")
+            Hotkey(TriggerKey, (KeyName) => ExecuteSpamA(KeyName), "On")
         else if (FeatureType == "InstPause")
             Hotkey(TriggerKey, (KeyName) => ExecuteInstPause(KeyName), "On")
         HotIfWinActive()
@@ -615,8 +612,8 @@ RegisterExtra_Hotkey(TriggerKey, FeatureType) {
 
 UpdateQCGUI() {
     global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5, QuickCastList
-    global ChkRapidA, EditRapidA, EditInstPause
-    global EnableRapidA, RapidABind, InstPauseBind
+    global ChkSpamA, EditSpamA, EditInstPause
+    global EnableSpamA, SpamABind, InstPauseBind
     
     try QCEdit1.Value := QuickCastList.Has(1) ? QuickCastList[1] : ""
     try QCEdit2.Value := QuickCastList.Has(2) ? QuickCastList[2] : ""
@@ -624,8 +621,8 @@ UpdateQCGUI() {
     try QCEdit4.Value := QuickCastList.Has(4) ? QuickCastList[4] : ""
     try QCEdit5.Value := QuickCastList.Has(5) ? QuickCastList[5] : ""
     
-    try ChkRapidA.Value := EnableRapidA
-    try EditRapidA.Value := RapidABind
+    try ChkSpamA.Value := EnableSpamA
+    try EditSpamA.Value := SpamABind
     try EditInstPause.Value := InstPauseBind
 }
 
@@ -634,7 +631,7 @@ UpdateQCGUI() {
 ; =====================================================================
 LoadSettings() {
     global IniFile, MacroList, QuickCastList
-    global EnableRapidA, RapidABind, InstPauseBind
+    global EnableSpamA, SpamABind, InstPauseBind
     
     if !FileExist(IniFile)
         return
@@ -647,12 +644,12 @@ LoadSettings() {
         }
     }
     
-    EnableRapidA := IniRead(IniFile, "ExtraFeatures", "EnableRapidA", 0)
-    RapidABind := IniRead(IniFile, "ExtraFeatures", "RapidABind", "a")
+    EnableSpamA := IniRead(IniFile, "ExtraFeatures", "EnableSpamA", 0)
+    SpamABind := IniRead(IniFile, "ExtraFeatures", "SpamABind", "a")
     InstPauseBind := IniRead(IniFile, "ExtraFeatures", "InstPauseBind", "")
     
-    if (EnableRapidA && RapidABind != "")
-        RegisterExtra_Hotkey(RapidABind, "RapidA")
+    if (EnableSpamA && SpamABind != "")
+        RegisterExtra_Hotkey(SpamABind, "SpamA")
     if (InstPauseBind != "")
         RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
@@ -692,19 +689,19 @@ RegisterHotkey(TriggerKey, ProfileName) {
 ; =====================================================================
 ; --- EXECUTION LOGIC: EXTRA FEATURES ---
 ; =====================================================================
-ExecuteRapidA(TriggerKeyName) {
-    global GameExe, EnableTooltip, LoopDelay
+ExecuteSpamA(TriggerKeyName) {
+    global GameExe, EnableTooltip, SpamDelay
     if !WinActive(GameExe)
         return
         
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
     
     if (EnableTooltip)
-        ToolTip("Rapid pressing 'A' Key...")
+        ToolTip("Spamming 'A' Key...")
         
     while GetKeyState(BaseKey, "P") {
         SendEvent("{a}")
-        Sleep LoopDelay
+        Sleep SpamDelay
     }
     
     if (EnableTooltip)
@@ -731,7 +728,7 @@ ExecuteInstPause(TriggerKeyName) {
 ; --- EXECUTION LOGIC: QUICK CAST (CURSOR-BOUND) ---
 ; =====================================================================
 ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
-    global GameExe, EnableTooltip, LoopDelay
+    global GameExe, EnableTooltip, SpamDelay
     if !WinActive(GameExe)
         return
         
@@ -746,7 +743,7 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
         SendEvent("{" ActualPreKey "}")
         Sleep 15
         Click
-        Sleep LoopDelay 
+        Sleep SpamDelay 
     }
     
     if (EnableTooltip) {
@@ -758,7 +755,7 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
 ; --- EXECUTION LOGIC: TARGETED MACRO ---
 ; =====================================================================
 ExecuteMacro(ProfileName, TriggerKeyName) {
-    global MacroList, GameExe, EnableTooltip, LoopDelay, EnableLetterbox
+    global MacroList, GameExe, EnableTooltip, SpamDelay, EnableLetterbox
     if !WinActive(GameExe)
         return
         
@@ -789,7 +786,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
         
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
 
-    if (data.Mode == "Rapid") {
+    if (data.Mode == "Spam") {
         MouseMove Round(TargetX), Round(TargetY), 0
         while GetKeyState(BaseKey, "P") {
             if (data.PreKey != "") {
@@ -797,7 +794,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
                 Sleep 15 
             }
             Click
-            Sleep LoopDelay 
+            Sleep SpamDelay 
         }
     } else if (data.Mode == "Hold") {
         if (data.PreKey != "") {
@@ -834,9 +831,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
 ; --- GLOBAL HOTKEYS (ACTIVE EVEN WHEN SUSPENDED) ---
 ; =====================================================================
 #SuspendExempt
-
-RCtrl & RAlt::
-RAlt & RCtrl:: {
+>+Esc:: {
     Suspend(-1)
     if (A_IsSuspended)
         ToolTip("Macro System: PAUSED (Safe to type)")
@@ -844,21 +839,9 @@ RAlt & RCtrl:: {
         ToolTip("Macro System: RESUMED (Active)")
     SetTimer () => ToolTip(), -2000
 }
-
-+/:: {
-    DetectHiddenWindows True
-    if (WinGetStyle("ahk_id " MainGui.Hwnd) & 0x10000000) ; WS_VISIBLE check
-        MainGui.Hide()
-    else
-        MainGui.Show()
+>+/:: {
+    MyGui.Show()
 }
-
-+Esc:: {
-    ToolTip("Exiting Macro System...")
-    Sleep 500
-    ExitApp()
-}
-
 #SuspendExempt False
 
 ; =====================================================================
