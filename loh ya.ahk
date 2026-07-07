@@ -22,8 +22,9 @@ global EnableSpamA := 0
 global SpamABind := "a"
 global InstPauseBind := ""
 
-; Load global preferences and determine which profile to open
+; Load global preferences from settings.ini
 global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
+global EnableLetterbox := IniRead(MasterIni, "Preferences", "EnableLetterbox", 0) 
 global SpamDelay := IniRead(MasterIni, "Preferences", "SpamDelay", 25)
 global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config.ini")
 
@@ -43,7 +44,7 @@ BtnImport := MyGui.Add("Button", "x+5 yp w55 h25", "Import")
 BtnImport.OnEvent("Click", ImportProfile)
 
 ; PANEL 1: Targeted Macro (Coordinate-Locked)
-MyGui.Add("GroupBox", "xm w270 h250", "Targeted Macro (Coordinate-Locked)")
+MyGui.Add("GroupBox", "xm w270 h275", "Targeted Macro (Coordinate-Locked)")
 MyGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
 
 global ComboName := MyGui.Add("ComboBox", "w250 vMacroName", [])
@@ -59,8 +60,9 @@ MyGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
 global DDL_ExecMode := MyGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Spam (Turbo)"])
 
 global ChkNoRet := MyGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
+global ChkLetterbox := MyGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Combat 2.06:1)")
 
-BtnSaveEdit := MyGui.Add("Button", "xm+10 y+10 w250 h26", "Save Profile Settings (Preserve Coordinates)")
+BtnSaveEdit := MyGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Preserve Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
 
 BtnRecord := MyGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
@@ -98,9 +100,12 @@ BtnSaveQC := MyGui.Add("Button", "xm+10 y+15 w250 h26", "Save Quick Cast & Extra
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
 ; PANEL 4: Global Preferences (settings.ini)
-MyGui.Add("GroupBox", "xm w270 h80", "Global Preferences (settings.ini)")
+MyGui.Add("GroupBox", "xm w270 h105", "Global Preferences (settings.ini)")
 global ChkTooltip := MyGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
+
+global ChkGlobalLetterbox := MyGui.Add("CheckBox", "xm+10 y+8 vEnableLetterbox Checked" EnableLetterbox, "Enable vertical letterbox projection")
+ChkGlobalLetterbox.OnEvent("Click", ToggleLetterboxSave)
 
 MyGui.Add("Text", "xm+10 y+10 w140", "Spam / Turbo Delay (ms):")
 global EditSpamDelay := MyGui.Add("Edit", "x+5 yp-2 w60", SpamDelay)
@@ -138,16 +143,32 @@ ClearAllHotkeys() {
     global EnableSpamA, SpamABind, InstPauseBind
 
     for name, data in MacroList {
-        try { HotIfWinActive(GameExe), Hotkey(data.Key, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(data.Key, "Off")
+            HotIfWinActive() 
+        }
     }
     for slot, keybind in QuickCastList {
-        try { HotIfWinActive(GameExe), Hotkey(keybind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(keybind, "Off")
+            HotIfWinActive() 
+        }
     }
     if (EnableSpamA && SpamABind != "") {
-        try { HotIfWinActive(GameExe), Hotkey(SpamABind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(SpamABind, "Off")
+            HotIfWinActive() 
+        }
     }
     if (InstPauseBind != "") {
-        try { HotIfWinActive(GameExe), Hotkey(InstPauseBind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(InstPauseBind, "Off")
+            HotIfWinActive() 
+        }
     }
 
     MacroList.Clear()
@@ -159,7 +180,7 @@ ClearAllHotkeys() {
 
 LoadOrCreateProfile(*) {
     global IniFile, MasterIni, ComboFiles, ConfigDir
-    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
+    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode, ChkLetterbox
     
     selected := ComboFiles.Text
     if (selected == "")
@@ -182,6 +203,7 @@ LoadOrCreateProfile(*) {
     EditKey.Value := ""
     EditPreKey.Value := ""
     ChkNoRet.Value := 0
+    ChkLetterbox.Value := 0
     DDL_ExecMode.Choose(1)
     
     MsgBox("Profile [" selected "] is now active!", "Profile Switched", 64)
@@ -189,7 +211,7 @@ LoadOrCreateProfile(*) {
 
 ImportProfile(*) {
     global ConfigDir, MasterIni, IniFile
-    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode
+    global ComboName, EditKey, EditPreKey, ChkNoRet, DDL_ExecMode, ChkLetterbox
 
     SelectedFile := FileSelect(3, "", "Select Configuration File to Import", "INI Files (*.ini)")
     if (SelectedFile == "")
@@ -221,6 +243,7 @@ ImportProfile(*) {
     EditKey.Value := ""
     EditPreKey.Value := ""
     ChkNoRet.Value := 0
+    ChkLetterbox.Value := 0
     DDL_ExecMode.Choose(1)
 
     MsgBox("Profile [" OutFileName "] successfully imported and activated!", "Import Success", 64)
@@ -251,12 +274,18 @@ CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
 
 
 ; =====================================================================
-; --- GUI SUPPORT FUNCTIONS (TARGETED MACRO & GLOBAL PREFS) ---
+; --- GUI SUPPORT FUNCTIONS ---
 ; =====================================================================
 ToggleTooltipSave(*) {
     global EnableTooltip, MasterIni, ChkTooltip
     EnableTooltip := ChkTooltip.Value
     IniWrite(EnableTooltip, MasterIni, "Preferences", "ShowTooltip")
+}
+
+ToggleLetterboxSave(*) {
+    global EnableLetterbox, MasterIni, ChkGlobalLetterbox
+    EnableLetterbox := ChkGlobalLetterbox.Value
+    IniWrite(EnableLetterbox, MasterIni, "Preferences", "EnableLetterbox")
 }
 
 SaveSpamDelay(*) {
@@ -313,7 +342,11 @@ SaveChanges(*) {
     
     oldKey := MacroList[name].Key
     if (oldKey != newKey) {
-        try { HotIfWinActive(GameExe), Hotkey(oldKey, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(oldKey, "Off")
+            HotIfWinActive() 
+        }
     }
     
     MacroList[name].Key := newKey
@@ -368,7 +401,7 @@ TriggerRecord(*) {
 #HotIf IsRecording
 $/:: {
     global IsRecording, TempName, TempKey, TempPreKey, TempMode, TempNoRet
-    global MacroList, GameExe, IniFile, BtnRecord
+    global MacroList, GameExe, IniFile, BtnRecord, ChkLetterbox
     
     if !WinActive(GameExe) {
         MsgBox("Error: Target window not active or not found!`nPlease ensure the game window is in focus before pressing [/].", "Invalid Target", 48)
@@ -383,20 +416,44 @@ $/:: {
     WinGetClientPos ,, &BaseW, &BaseH, GameExe
     PureMode := RegExReplace(TempMode, " \(.*", "")
     
-    MacroList[TempName] := {Key: TempKey, PreKey: TempPreKey, X: mx, Y: my, BaseW: BaseW, BaseH: BaseH, Mode: PureMode, NoRet: TempNoRet}
+    ; --- PRECISE MATH LOGIC: NORMALIZATION DURING SAVE ---
+    ; We always normalize coordinates to a 1920x1080 standard 16:9 layout
+    if (ChkLetterbox.Value) {
+        CombatH := BaseW / 2.0556
+        TopBar := (BaseH - CombatH) / 2
+        PureX := mx - (BaseW / 2)
+        PureY := my - (TopBar + (CombatH / 2))
+        
+        NormX := PureX / CombatH
+        NormY := PureY / CombatH
+    } else {
+        PureX := mx - (BaseW / 2)
+        PureY := my - (BaseH / 2)
+        
+        NormX := PureX / BaseH
+        NormY := PureY / BaseH
+    }
+    
+    ; Convert back to 1920x1080 basis for standardized storage
+    finalX := (1920 / 2) + (NormX * 1080)
+    finalY := (1080 / 2) + (NormY * 1080)
+    finalBaseW := 1920
+    finalBaseH := 1080
+    
+    MacroList[TempName] := {Key: TempKey, PreKey: TempPreKey, X: finalX, Y: finalY, BaseW: finalBaseW, BaseH: finalBaseH, Mode: PureMode, NoRet: TempNoRet}
     
     IniWrite(TempKey, IniFile, TempName, "Key")
     IniWrite(TempPreKey, IniFile, TempName, "PreKey")
-    IniWrite(mx, IniFile, TempName, "X")
-    IniWrite(my, IniFile, TempName, "Y")
-    IniWrite(BaseW, IniFile, TempName, "BaseW")
-    IniWrite(BaseH, IniFile, TempName, "BaseH")
+    IniWrite(finalX, IniFile, TempName, "X")
+    IniWrite(finalY, IniFile, TempName, "Y")
+    IniWrite(finalBaseW, IniFile, TempName, "BaseW")
+    IniWrite(finalBaseH, IniFile, TempName, "BaseH")
     IniWrite(PureMode, IniFile, TempName, "ModeExec")
     IniWrite(TempNoRet, IniFile, TempName, "NoReturn")
     
     RegisterHotkey(TempKey, TempName)
     UpdateDropdown()
-    MsgBox("Profile '" TempName "' saved successfully (Coordinates Locked)!", "Success", 64)
+    MsgBox("Profile '" TempName "' saved successfully (Coordinates Normalized)!", "Success", 64)
 }
 #HotIf
 
@@ -425,7 +482,11 @@ DeleteMacro(*) {
     ActualName := RegExReplace(DDL_Macro.Text, "^(\[.*?\]\s*)*", "")
     ActualName := RegExReplace(ActualName, " \(.*", "")
     
-    try { HotIfWinActive(GameExe), Hotkey(MacroList[ActualName].Key, "Off"), HotIfWinActive() }
+    try { 
+        HotIfWinActive(GameExe)
+        Hotkey(MacroList[ActualName].Key, "Off")
+        HotIfWinActive() 
+    }
     
     MacroList.Delete(ActualName)
     IniDelete(IniFile, ActualName)
@@ -457,7 +518,6 @@ SaveQuickCast(*) {
     if (newInstPauseBind != "")
         CheckList["Instant Pause"] := newInstPauseBind
         
-    ; 1. Internal duplication check
     for label1, key1 in CheckList {
         for label2, key2 in CheckList {
             if (label1 != label2 && key1 == key2) {
@@ -467,7 +527,6 @@ SaveQuickCast(*) {
         }
     }
     
-    ; 2. Global conflicts (Check against Targeted Macros)
     for label, key in CheckList {
         for name, data in MacroList {
             if (data.Key == key) {
@@ -477,20 +536,30 @@ SaveQuickCast(*) {
         }
     }
     
-    ; 3. Turn off old hotkeys safely
     for slot, keybind in QuickCastList {
-        try { HotIfWinActive(GameExe), Hotkey(keybind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(keybind, "Off")
+            HotIfWinActive() 
+        }
     }
     if (EnableSpamA && SpamABind != "") {
-        try { HotIfWinActive(GameExe), Hotkey(SpamABind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(SpamABind, "Off")
+            HotIfWinActive() 
+        }
     }
     if (InstPauseBind != "") {
-        try { HotIfWinActive(GameExe), Hotkey(InstPauseBind, "Off"), HotIfWinActive() }
+        try { 
+            HotIfWinActive(GameExe)
+            Hotkey(InstPauseBind, "Off")
+            HotIfWinActive() 
+        }
     }
     
     QuickCastList.Clear()
     
-    ; 4. Save and Register new QC hotkeys
     Loop 5 {
         kb := newData[A_Index]
         IniWrite(kb, IniFile, "QuickCast", "Slot" A_Index)
@@ -500,7 +569,6 @@ SaveQuickCast(*) {
         }
     }
     
-    ; 5. Save and Register Extra Features
     EnableSpamA := newSpamAEnabled
     SpamABind := newSpamABind
     InstPauseBind := newInstPauseBind
@@ -568,7 +636,6 @@ LoadSettings() {
     if !FileExist(IniFile)
         return
         
-    ; Load QC Binds
     Loop 5 {
         kb := IniRead(IniFile, "QuickCast", "Slot" A_Index, "")
         if (kb != "") {
@@ -577,7 +644,6 @@ LoadSettings() {
         }
     }
     
-    ; Load Extra Binds
     EnableSpamA := IniRead(IniFile, "ExtraFeatures", "EnableSpamA", 0)
     SpamABind := IniRead(IniFile, "ExtraFeatures", "SpamABind", "a")
     InstPauseBind := IniRead(IniFile, "ExtraFeatures", "InstPauseBind", "")
@@ -587,7 +653,6 @@ LoadSettings() {
     if (InstPauseBind != "")
         RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
-    ; Load Target Macros
     try {
         FormatINI := FileRead(IniFile)
         Loop Parse, FormatINI, "`n", "`r" {
@@ -690,18 +755,31 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
 ; --- EXECUTION LOGIC: TARGETED MACRO ---
 ; =====================================================================
 ExecuteMacro(ProfileName, TriggerKeyName) {
-    global MacroList, GameExe, EnableTooltip, SpamDelay
+    global MacroList, GameExe, EnableTooltip, SpamDelay, EnableLetterbox
     if !WinActive(GameExe)
         return
         
     data := MacroList[ProfileName]
     WinGetClientPos ,, &CurrentW, &CurrentH, GameExe
     
-    Scale := CurrentH / data.BaseH
-    TargetY := data.Y * Scale
-    CenterX := CurrentW / 2
-    DistXFromCenter := data.X - (data.BaseW / 2)
-    TargetX := CenterX + (DistXFromCenter * Scale)
+    ; --- PRECISE MATH LOGIC: PROJECTION DURING EXECUTION ---
+    SavedActiveH := data.BaseH
+    NormX := (data.X - (data.BaseW / 2)) / SavedActiveH
+    NormY := (data.Y - (data.BaseH / 2)) / SavedActiveH
+    
+    if (EnableLetterbox) {
+        CombatH := CurrentW / 2.0556
+        TopBar := (CurrentH - CombatH) / 2
+        CenterY := TopBar + (CombatH / 2)
+        
+        TargetX := (CurrentW / 2) + (NormX * CombatH)
+        TargetY := CenterY + (NormY * CombatH)
+    } else {
+        CenterY := CurrentH / 2
+        
+        TargetX := (CurrentW / 2) + (NormX * CurrentH)
+        TargetY := CenterY + (NormY * CurrentH)
+    }
     
     if (!data.NoRet)
         MouseGetPos &OriginX, &OriginY
