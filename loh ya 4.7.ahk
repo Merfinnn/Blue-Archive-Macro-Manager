@@ -1,9 +1,5 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
-#MaxThreadsPerHotkey 1
-InstallKeybdHook
-#UseHook
-Persistent
 SendMode "Event"
 SetKeyDelay -1, -1
 SetMouseDelay -1
@@ -38,9 +34,7 @@ global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config
 LoadSettings()
 
 ; --- GUI INTERFACE CREATION ---
-global MainGui := Gui("+", "Blue Archive Macro Manager")
-;MainGui.AddPicture("x0 y0 w270 h300", "d:\Downloads\146867220_p0.png")
-;MainGui.BackColor := "f4e1fa"
+global MainGui := Gui("+AlwaysOnTop", "Blue Archive Macro Manager")
 MainGui.SetFont("s9", "Segoe UI")
 
 ; PANEL 0: Profile Management
@@ -52,39 +46,39 @@ BtnImport := MainGui.Add("Button", "x+5 yp w55 h25", "Import")
 BtnImport.OnEvent("Click", ImportProfile)
 
 ; PANEL 1: Targeted Macro (Coordinate-Locked)
-MainGui.Add("GroupBox", "xm w270 h285", "Targeted Macro (Coordinate-Locked)")
+MainGui.Add("GroupBox", "xm w270 h275", "Targeted Macro (Coordinate-Locked)")
 MainGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
 
 global ComboName := MainGui.Add("ComboBox", "w250 vMacroName", [])
 ComboName.OnEvent("Change", AutoFillMacro)
 
 MainGui.Add("Text", "w115", "Trigger Keybind:")
-global EditKey := MainGui.Add("Edit", "w115 vKeybind", "")
+global EditKey := MainGui.Add("Edit", "w115 vKeybind", "F3")
 
-MainGui.Add("Text", "x+10 yp-22 w115", "Pre-Key (Optional):")
+MainGui.Add("Text", "x+10 yp w115", "Pre-Key (Optional):")
 global EditPreKey := MainGui.Add("Edit", "w115 vPreKey", "")
 
 MainGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
-global DDL_ExecMode := MainGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold", "Rapid"])
+global DDL_ExecMode := MainGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold (Aiming)", "Rapid (Turbo)"])
 
 global ChkNoRet := MainGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
-global ChkLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Cinematic 2.06:1)")
+global ChkLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Combat 2.06:1)")
 
-BtnSaveEdit := MainGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Keep Coordinates)")
+BtnSaveEdit := MainGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Preserve Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
+
 BtnRecord := MainGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
 BtnRecord.OnEvent("Click", TriggerRecord)
 
 ; PANEL 2: Active Targeted Macros
-MainGui.Add("GroupBox", "xm w270 h88", "Active Targeted Macros")
+MainGui.Add("GroupBox", "xm w270 h90", "Active Targeted Macros")
 global DDL_Macro := MainGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
 
 BtnDelete := MainGui.Add("Button", "w250", "Delete Selected Macro")
 BtnDelete.OnEvent("Click", DeleteMacro)
 
 ; PANEL 3: Quick Cast & Extra Features
-MainGui.Add("GroupBox", "xm w270 h185", "Quick Cast and Utilities")
-
+MainGui.Add("GroupBox", "xm w270 h195", "Quick Cast & Extra Features")
 MainGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
 global QCEdit1 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
 MainGui.Add("Text", "x+10 yp+2 w60", "Slot 2:")
@@ -98,31 +92,31 @@ global QCEdit4 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
 MainGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
 global QCEdit5 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
 
-MainGui.Add("Text", "x+10 yp+2 w60", "Pause Bind:")
-global EditInstPause := MainGui.Add("Edit", "x+5 yp-2 w55 vInstPauseBind", InstPauseBind)
+global ChkRapidA := MainGui.Add("CheckBox", "xm+10 y+15 vEnableRapidA Checked" EnableRapidA, "Enable 'A' Key Rapid. Trigger:")
+global EditRapidA := MainGui.Add("Edit", "x+5 yp-2 w45 vRapidABind", RapidABind)
 
-global ChkRapidA := MainGui.Add("CheckBox", "xm+10 y+10 vEnableRapidA Checked" EnableRapidA, "Enable 'A' Key Rapid. Trigger:")
-global EditRapidA := MainGui.Add("Edit", "x+5 yp-2 w55 vRapidABind", RapidABind)
+MainGui.Add("Text", "xm+10 y+12 w120", "Instant Pause Bind:")
+global EditInstPause := MainGui.Add("Edit", "x+5 yp-2 w45 vInstPauseBind", InstPauseBind)
 
-BtnSaveQC := MainGui.Add("Button", "xm+10 y+10 w250 h26", "Save Quick Cast and Utilities Binds")
+BtnSaveQC := MainGui.Add("Button", "xm+10 y+15 w250 h26", "Save Quick Cast & Extra Binds")
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
 
 ; PANEL 4: Global Preferences (settings.ini)
-MainGui.Add("GroupBox", "xm w270 h120", "Global Preferences")
+MainGui.Add("GroupBox", "xm w270 h115", "Global Preferences (settings.ini)")
 global ChkTooltip := MainGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
 
 global ChkGlobalLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vEnableLetterbox Checked" EnableLetterbox, "Enable vertical letterbox projection")
 ChkGlobalLetterbox.OnEvent("Click", ToggleLetterboxSave)
 
-MainGui.Add("Text", "xm+10 y+10 w100", "Loop Delay (ms):")
+MainGui.Add("Text", "xm+10 y+10 w140", "Loop / Turbo Delay (ms):")
 global EditLoopDelay := MainGui.Add("Edit", "x+5 yp-2 w60", LoopDelay)
 EditLoopDelay.OnEvent("Change", SaveLoopDelay)
-MainGui.Add("UpDown", "Range1-1000", LoopDelay).OnEvent("Change", SaveLoopDelay)
+MainGui.Add("UpDown", "Range10-1000", LoopDelay).OnEvent("Change", SaveLoopDelay)
 
 ; --- CREDIT SECTION ---
 MainGui.SetFont("s7 c888888") ; Small and dim gray font
-MainGui.Add("Text", "xm y+10 w255 Right", "v1.4.8 | Discord: raphii___")
+MainGui.Add("Text", "xm y+10 w255 Right", "Created by Gemini")
 MainGui.SetFont("s9 cDefault") ; Revert back to original font
 
 UpdateFileDropdown()
@@ -383,7 +377,7 @@ TriggerRecord(*) {
     if (IsRecording) {
         IsRecording := false
         BtnRecord.Text := "Create New / Overwrite Coordinates (/)" 
-        ToolTip("Recording cancelled.")
+        ToolTip("Coordinate recording cancelled.")
         SetTimer () => ToolTip(), -1500
         return
     }
@@ -407,8 +401,8 @@ TriggerRecord(*) {
     TempNoRet := ChkNoRet.Value
     
     IsRecording := true
-    BtnRecord.Text := "Cancel Recording"
-    ToolTip("Switch to the game! Hover over the target, then press [/] to lock.")
+    BtnRecord.Text := "Cancel Recording (Click Again)"
+    ToolTip("Switch to game! Hover over the target, then press [/] to lock coordinates.")
 }
 
 #HotIf IsRecording
@@ -446,8 +440,8 @@ $/:: {
         NormY := PureY / BaseH
     }
     
-    finalX := Round((1920 / 2) + (NormX * 1080), 2)
-    finalY := Round((1080 / 2) + (NormY * 1080), 2)
+    finalX := (1920 / 2) + (NormX * 1080)
+    finalY := (1080 / 2) + (NormY * 1080)
     finalBaseW := 1920
     finalBaseH := 1080
     
@@ -708,7 +702,7 @@ ExecuteRapidA(TriggerKeyName) {
     BaseKey := RegExReplace(TriggerKeyName, "[\^\!\+\#\<\>\~*]", "")
     
     if (EnableTooltip)
-        ToolTip("Sending 'A' Key...")
+        ToolTip("Rapid pressing 'A' Key...")
         
     while GetKeyState(BaseKey, "P") {
         SendEvent("{a}")
@@ -747,12 +741,12 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     ActualPreKey := String(SlotPreKey)
     
     if (EnableTooltip) {
-        ToolTip("Casting Slot " ActualPreKey)
+        ToolTip("Quick Cast Active: Slot " ActualPreKey)
     }
     
     while GetKeyState(BaseKey, "P") {
         SendEvent("{" ActualPreKey "}")
-        ;Sleep 15
+        Sleep 15
         Click
         Sleep LoopDelay 
     }
@@ -802,7 +796,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
         while GetKeyState(BaseKey, "P") {
             if (data.PreKey != "") {
                 SendEvent("{" data.PreKey "}")
-                ;Sleep 15 
+                Sleep 15 
             }
             Click
             Sleep LoopDelay 
@@ -810,10 +804,10 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     } else if (data.Mode == "Hold") {
         if (data.PreKey != "") {
             SendEvent("{" data.PreKey "}")
-            ;Sleep 50 
+            Sleep 50 
         }
         MouseMove Round(TargetX), Round(TargetY), 0
-        ;Sleep 30
+        Sleep 30
         
         Click "Down"
         KeyWait BaseKey 
@@ -821,20 +815,19 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     } else {
         if (data.PreKey != "") {
             SendEvent("{" data.PreKey "}")
-            ;Sleep 50 
+            Sleep 50 
         }
         MouseMove Round(TargetX), Round(TargetY), 0
-        ;Sleep 30
+        Sleep 30
         Click
     }
     
-    ;Sleep 30
+    Sleep 30
     if (!data.NoRet)
-        Sleep 30
         MouseMove OriginX, OriginY, 0
     
     if (EnableTooltip) {
-        ToolTip("Executed: " ProfileName)
+        ToolTip("Macro Executed: " ProfileName)
         SetTimer () => ToolTip(), -1000
     }
 }
@@ -848,12 +841,12 @@ RCtrl & RAlt::
 RAlt & RCtrl:: {
     Suspend(-1)
     if (A_IsSuspended)
-        ToolTip("PAUSED (Safe to type)")
+        ToolTip("Macro System: PAUSED (Safe to type)")
     else
-        ToolTip("RESUMED (Active)")
+        ToolTip("Macro System: RESUMED (Active)")
     SetTimer () => ToolTip(), -2000
 }
-/*
+
 +/:: {
     DetectHiddenWindows True
     if (WinGetStyle("ahk_id " MainGui.Hwnd) & 0x10000000) ; WS_VISIBLE check
@@ -861,24 +854,19 @@ RAlt & RCtrl:: {
     else
         MainGui.Show()
 }
-*/
->+/:: {
-    MainGui.Show()
-}
+
 +Esc:: {
-    ToolTip("Exiting Macro...")
+    ToolTip("Exiting Macro System...")
     Sleep 500
     ExitApp()
 }
 
 #SuspendExempt False
-/*
+
 ; =====================================================================
 ; --- CONTEXT-AWARE KEY REMAPPING (IN-GAME ONLY) ---
 ; =====================================================================
-
 #HotIf WinActive(GameExe)
 Space::s
 r::a
 #HotIf
-*/
