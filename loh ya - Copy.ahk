@@ -8,92 +8,136 @@ SendMode "Event"
 SetKeyDelay -1, -1
 SetMouseDelay -1
 CoordMode "Mouse", "Client"
+
+; --- GLOBAL VARIABLES & FOLDER MANAGEMENT ---
 global ConfigDir := A_ScriptDir "\saved binds"
+
 if !DirExist(ConfigDir)
     DirCreate(ConfigDir)
+
 global MasterIni := ConfigDir "\settings.ini"
 global GameExe := "ahk_exe BlueArchive.exe"
 global MacroList := Map()
 global QuickCastList := Map()
 global IsRecording := false
 global TempName := "", TempKey := "", TempPreKey := ""
-global TempMode := "Hold", TempNoRet := 0
+global TempMode := "Normal", TempNoRet := 0
+
+; Extra Features Variables
 global EnableRapidA := 0
 global RapidABind := "a"
 global InstPauseBind := ""
+
+; Load global preferences from settings.ini
 global EnableTooltip := IniRead(MasterIni, "Preferences", "ShowTooltip", 1)
 global EnableLetterbox := IniRead(MasterIni, "Preferences", "EnableLetterbox", 0) 
 global LoopDelay := IniRead(MasterIni, "Preferences", "LoopDelay", 25)
 global IniFile := IniRead(MasterIni, "System", "LastProfile", ConfigDir "\config.ini")
 
+; --- INITIALIZATION ---
 LoadSettings()
+
+; --- GUI INTERFACE CREATION ---
 global MainGui := Gui("+", "Blue Archive Macro Manager")
+;MainGui.AddPicture("x0 y0 w270 h300", "d:\Downloads\146867220_p0.png")
+;MainGui.BackColor := "f4e1fa"
 MainGui.SetFont("s9", "Segoe UI")
+
+; PANEL 0: Profile Management
 MainGui.Add("GroupBox", "w270 h55", "Configuration Profile")
 ComboFiles := MainGui.Add("ComboBox", "xp+10 yp+20 w130", [])
 BtnLoadProfile := MainGui.Add("Button", "x+5 yp-1 w55 h25", "Load")
 BtnLoadProfile.OnEvent("Click", LoadOrCreateProfile)
 BtnImport := MainGui.Add("Button", "x+5 yp w55 h25", "Import")
 BtnImport.OnEvent("Click", ImportProfile)
+
+; PANEL 1: Targeted Macro (Coordinate-Locked)
 MainGui.Add("GroupBox", "xm w270 h285", "Targeted Macro (Coordinate-Locked)")
 MainGui.Add("Text", "xp+10 yp+20", "Select Profile or Enter New Name:")
+
 global ComboName := MainGui.Add("ComboBox", "w250 vMacroName", [])
 ComboName.OnEvent("Change", AutoFillMacro)
+
 MainGui.Add("Text", "w115", "Trigger Keybind:")
 global EditKey := MainGui.Add("Edit", "w115 vKeybind", "")
+
 MainGui.Add("Text", "x+10 yp-22 w115", "Pre-Key (Optional):")
 global EditPreKey := MainGui.Add("Edit", "w115 vPreKey", "")
+
 MainGui.Add("Text", "xm+10 y+15 w90", "Execution Mode:")
-global DDL_ExecMode := MainGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Hold", "Rapid"])
+global DDL_ExecMode := MainGui.Add("DropDownList", "x+5 yp-3 w155 vExecMode Choose1", ["Normal", "Hold", "Rapid"])
+
 global ChkNoRet := MainGui.Add("CheckBox", "xm+10 y+10 vNoReturn", "Do not restore cursor position (No-Return)")
 global ChkLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vIsLetterbox", "Save as vertical letterbox (Cinematic 2.06:1)")
+
 BtnSaveEdit := MainGui.Add("Button", "xm+10 y+12 w250 h26", "Save Profile Settings (Keep Coordinates)")
 BtnSaveEdit.OnEvent("Click", SaveChanges)
 BtnRecord := MainGui.Add("Button", "xm+10 y+5 w250 h26", "Create New / Overwrite Coordinates (/)")
 BtnRecord.OnEvent("Click", TriggerRecord)
+
+; PANEL 2: Active Targeted Macros
 MainGui.Add("GroupBox", "xm w270 h88", "Active Targeted Macros")
 global DDL_Macro := MainGui.Add("DropDownList", "xp+10 yp+20 w250 vSelectedMacro")
+
 BtnDelete := MainGui.Add("Button", "w250", "Delete Selected Macro")
 BtnDelete.OnEvent("Click", DeleteMacro)
+
+; PANEL 3: Quick Cast & Extra Features
 MainGui.Add("GroupBox", "xm w270 h185", "Quick Cast and Utilities")
+
 MainGui.Add("Text", "xp+10 yp+20 w60", "Slot 1:")
 global QCEdit1 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC1", "")
 MainGui.Add("Text", "x+10 yp+2 w60", "Slot 2:")
 global QCEdit2 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC2", "")
+
 MainGui.Add("Text", "xm+10 y+10 w60", "Slot 3:")
 global QCEdit3 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC3", "")
 MainGui.Add("Text", "x+10 yp+2 w60", "Slot 4:")
 global QCEdit4 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC4", "")
+
 MainGui.Add("Text", "xm+10 y+10 w60", "Slot 5:")
 global QCEdit5 := MainGui.Add("Edit", "x+5 yp-2 w55 vQC5", "")
+
 MainGui.Add("Text", "x+10 yp+2 w60", "Pause Bind:")
 global EditInstPause := MainGui.Add("Edit", "x+5 yp-2 w55 vInstPauseBind", InstPauseBind)
+
 global ChkRapidA := MainGui.Add("CheckBox", "xm+10 y+10 vEnableRapidA Checked" EnableRapidA, "Enable 'A' Key Rapid. Trigger:")
 global EditRapidA := MainGui.Add("Edit", "x+5 yp-2 w55 vRapidABind", RapidABind)
+
 BtnSaveQC := MainGui.Add("Button", "xm+10 y+10 w250 h26", "Save Quick Cast and Utilities Binds")
 BtnSaveQC.OnEvent("Click", SaveQuickCast)
+
+; PANEL 4: Global Preferences (settings.ini)
 MainGui.Add("GroupBox", "xm w270 h120", "Global Preferences")
 global ChkTooltip := MainGui.Add("CheckBox", "xp+10 yp+20 vEnableTooltip Checked" EnableTooltip, "Enable OSD Notifications (Tooltips)")
 ChkTooltip.OnEvent("Click", ToggleTooltipSave)
+
 global ChkGlobalLetterbox := MainGui.Add("CheckBox", "xm+10 y+8 vEnableLetterbox Checked" EnableLetterbox, "Enable vertical letterbox projection")
 ChkGlobalLetterbox.OnEvent("Click", ToggleLetterboxSave)
+
 MainGui.Add("Text", "xm+10 y+10 w100", "Loop Delay (ms):")
 global EditLoopDelay := MainGui.Add("Edit", "x+5 yp-2 w60", LoopDelay)
 EditLoopDelay.OnEvent("Change", SaveLoopDelay)
 MainGui.Add("UpDown", "Range1-1000", LoopDelay).OnEvent("Change", SaveLoopDelay)
-MainGui.SetFont("s7 c888888") 
+
+; --- CREDIT SECTION ---
+MainGui.SetFont("s7 c888888") ; Small and dim gray font
 MainGui.Add("Text", "xm y+10 w255 Right", "v1.4.8 | Discord: raphii___")
-MainGui.SetFont("s9 cDefault") 
+MainGui.SetFont("s9 cDefault") ; Revert back to original font
 
 UpdateFileDropdown()
 UpdateDropdown()
 UpdateQCGUI()
 MainGui.Show("w290")
 
+
+; =====================================================================
+; --- PROFILE & FILE MANAGER LOGIC ---
+; =====================================================================
 UpdateFileDropdown() {
     global ComboFiles, IniFile, ConfigDir
     files := []
-
+    
     Loop Files ConfigDir "\*.ini" {
         if (A_LoopFileName != "settings.ini")
             files.Push(A_LoopFileName)
@@ -218,6 +262,10 @@ ImportProfile(*) {
     MsgBox("Profile [" OutFileName "] successfully imported and activated!", "Import Success", 64)
 }
 
+
+; =====================================================================
+; --- KEYBIND CONFLICT CHECKER (ANTI DOUBLE-BIND) ---
+; =====================================================================
 CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
     global MacroList, QuickCastList, EnableRapidA, RapidABind, InstPauseBind
     
@@ -230,13 +278,17 @@ CheckKeybindConflict(CheckKey, ExcludeMacro := "") {
             return "Quick Cast Slot: " slot
     }
     if (EnableRapidA && RapidABind = CheckKey)
-        return "Utilities: Rapid A"
+        return "Extra Feature: Rapid A"
     if (InstPauseBind != "" && InstPauseBind = CheckKey)
-        return "Utilities: Instant Pause"
+        return "Extra Feature: Instant Pause"
         
     return ""
 }
 
+
+; =====================================================================
+; --- GUI SUPPORT FUNCTIONS ---
+; =====================================================================
 ToggleTooltipSave(*) {
     global EnableTooltip, MasterIni, ChkTooltip
     EnableTooltip := ChkTooltip.Value
@@ -268,10 +320,12 @@ AutoFillMacro(*) {
         EditPreKey.Value := data.PreKey
         ChkNoRet.Value := data.NoRet
         
-        if (data.Mode == "Hold")
+        if (data.Mode == "Normal")
             DDL_ExecMode.Choose(1)
-        else if (data.Mode == "Rapid")
+        else if (data.Mode == "Hold")
             DDL_ExecMode.Choose(2)
+        else if (data.Mode == "Rapid")
+            DDL_ExecMode.Choose(3)
     }
 }
 
@@ -363,7 +417,7 @@ $/:: {
     global MacroList, GameExe, IniFile, BtnRecord, ChkLetterbox
     
     if !WinActive(GameExe) {
-        MsgBox("Target window not active or not found!`nPlease ensure the game window is in focus before pressing [/].", "Invalid Target", 48)
+        MsgBox("Error: Target window not active or not found!`nPlease ensure the game window is in focus before pressing [/].", "Invalid Target", 48)
         return 
     }
     
@@ -374,17 +428,20 @@ $/:: {
     MouseGetPos &mx, &my
     WinGetClientPos ,, &BaseW, &BaseH, GameExe
     PureMode := RegExReplace(TempMode, " \(.*", "")
-
+    
+    ; --- PRECISE MATH LOGIC: NORMALIZATION DURING SAVE ---
     if (ChkLetterbox.Value) {
         CombatH := BaseW / 2.0556
         TopBar := (BaseH - CombatH) / 2
         PureX := mx - (BaseW / 2)
         PureY := my - (TopBar + (CombatH / 2))
+        
         NormX := PureX / CombatH
         NormY := PureY / CombatH
     } else {
         PureX := mx - (BaseW / 2)
         PureY := my - (BaseH / 2)
+        
         NormX := PureX / BaseH
         NormY := PureY / BaseH
     }
@@ -407,7 +464,7 @@ $/:: {
     
     RegisterHotkey(TempKey, TempName)
     UpdateDropdown()
-    MsgBox("Profile '" TempName "' saved successfully!", "Success", 64)
+    MsgBox("Profile '" TempName "' saved successfully (Coordinates Normalized)!", "Success", 64)
 }
 #HotIf
 
@@ -416,7 +473,7 @@ UpdateDropdown() {
     arrList := []
     nameList := []
     for name, data in MacroList {
-        optText := (data.Mode != "Hold" ? "[" data.Mode "] " : "") . (data.NoRet ? "[NO-RET] " : "")
+        optText := (data.Mode != "Normal" ? "[" data.Mode "] " : "") . (data.NoRet ? "[NO-RET] " : "")
         arrList.Push(optText name " (" data.Key ")")
         nameList.Push(name)
     }
@@ -447,6 +504,9 @@ DeleteMacro(*) {
     UpdateDropdown()
 }
 
+; =====================================================================
+; --- QUICK CAST & EXTRA FEATURES SUPPORT FUNCTIONS ---
+; =====================================================================
 SaveQuickCast(*) {
     global IniFile, QuickCastList, GameExe, MacroList
     global QCEdit1, QCEdit2, QCEdit3, QCEdit4, QCEdit5
@@ -533,7 +593,7 @@ SaveQuickCast(*) {
     if (InstPauseBind != "")
         RegisterExtra_Hotkey(InstPauseBind, "InstPause")
         
-    MsgBox("Quick Cast & Utilities saved successfully!", "Success", 64)
+    MsgBox("Quick Cast & Extra keybinds saved successfully!", "Success", 64)
 }
 
 RegisterQC_Hotkey(TriggerKey, Slot) {
@@ -577,6 +637,9 @@ UpdateQCGUI() {
     try EditInstPause.Value := InstPauseBind
 }
 
+; =====================================================================
+; --- CONFIGURATION LOADER ---
+; =====================================================================
 LoadSettings() {
     global IniFile, MacroList, QuickCastList
     global EnableRapidA, RapidABind, InstPauseBind
@@ -615,7 +678,7 @@ LoadSettings() {
                 y := IniRead(IniFile, Section, "Y")
                 bw := IniRead(IniFile, Section, "BaseW", 1920)
                 bh := IniRead(IniFile, Section, "BaseH", 1080)
-                md := IniRead(IniFile, Section, "ModeExec", "Hold")
+                md := IniRead(IniFile, Section, "ModeExec", "Normal")
                 nr := IniRead(IniFile, Section, "NoReturn", 0)
                 
                 MacroList[Section] := {Key: k, PreKey: pk, X: x, Y: y, BaseW: bw, BaseH: bh, Mode: md, NoRet: nr}
@@ -634,6 +697,9 @@ RegisterHotkey(TriggerKey, ProfileName) {
     }
 }
 
+; =====================================================================
+; --- EXECUTION LOGIC: EXTRA FEATURES ---
+; =====================================================================
 ExecuteRapidA(TriggerKeyName) {
     global GameExe, EnableTooltip, LoopDelay
     if !WinActive(GameExe)
@@ -669,6 +735,9 @@ ExecuteInstPause(TriggerKeyName) {
         SetTimer () => ToolTip(), -1000
 }
 
+; =====================================================================
+; --- EXECUTION LOGIC: QUICK CAST (CURSOR-BOUND) ---
+; =====================================================================
 ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     global GameExe, EnableTooltip, LoopDelay
     if !WinActive(GameExe)
@@ -683,6 +752,7 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     
     while GetKeyState(BaseKey, "P") {
         SendEvent("{" ActualPreKey "}")
+        ;Sleep 15
         Click
         Sleep LoopDelay 
     }
@@ -692,6 +762,9 @@ ExecuteQuickCast(SlotPreKey, TriggerKeyName) {
     }
 }
 
+; =====================================================================
+; --- EXECUTION LOGIC: TARGETED MACRO ---
+; =====================================================================
 ExecuteMacro(ProfileName, TriggerKeyName) {
     global MacroList, GameExe, EnableTooltip, LoopDelay, EnableLetterbox
     if !WinActive(GameExe)
@@ -700,6 +773,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     data := MacroList[ProfileName]
     WinGetClientPos ,, &CurrentW, &CurrentH, GameExe
     
+    ; --- PRECISE MATH LOGIC: PROJECTION DURING EXECUTION ---
     SavedActiveH := data.BaseH
     NormX := (data.X - (data.BaseW / 2)) / SavedActiveH
     NormY := (data.Y - (data.BaseH / 2)) / SavedActiveH
@@ -708,10 +782,12 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
         CombatH := CurrentW / 2.0556
         TopBar := (CurrentH - CombatH) / 2
         CenterY := TopBar + (CombatH / 2)
+        
         TargetX := (CurrentW / 2) + (NormX * CombatH)
         TargetY := CenterY + (NormY * CombatH)
     } else {
         CenterY := CurrentH / 2
+        
         TargetX := (CurrentW / 2) + (NormX * CurrentH)
         TargetY := CenterY + (NormY * CurrentH)
     }
@@ -726,6 +802,7 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
         while GetKeyState(BaseKey, "P") {
             if (data.PreKey != "") {
                 SendEvent("{" data.PreKey "}")
+                ;Sleep 15 
             }
             Click
             Sleep LoopDelay 
@@ -733,13 +810,25 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     } else if (data.Mode == "Hold") {
         if (data.PreKey != "") {
             SendEvent("{" data.PreKey "}")
+            ;Sleep 50 
         }
         MouseMove Round(TargetX), Round(TargetY), 0
+        ;Sleep 30
         
         Click "Down"
         KeyWait BaseKey 
         Click "Up"
+    } else {
+        if (data.PreKey != "") {
+            SendEvent("{" data.PreKey "}")
+            ;Sleep 50 
+        }
+        MouseMove Round(TargetX), Round(TargetY), 0
+        ;Sleep 30
+        Click
     }
+    
+    ;Sleep 30
     if (!data.NoRet)
         Sleep 30
         MouseMove OriginX, OriginY, 0
@@ -750,6 +839,9 @@ ExecuteMacro(ProfileName, TriggerKeyName) {
     }
 }
 
+; =====================================================================
+; --- GLOBAL HOTKEYS (ACTIVE EVEN WHEN SUSPENDED) ---
+; =====================================================================
 #SuspendExempt
 
 RCtrl & RAlt::
@@ -761,6 +853,15 @@ RAlt & RCtrl:: {
         ToolTip("RESUMED (Active)")
     SetTimer () => ToolTip(), -2000
 }
+/*
++/:: {
+    DetectHiddenWindows True
+    if (WinGetStyle("ahk_id " MainGui.Hwnd) & 0x10000000) ; WS_VISIBLE check
+        MainGui.Hide()
+    else
+        MainGui.Show()
+}
+*/
 >+/:: {
     MainGui.Show()
 }
@@ -771,3 +872,13 @@ RAlt & RCtrl:: {
 }
 
 #SuspendExempt False
+/*
+; =====================================================================
+; --- CONTEXT-AWARE KEY REMAPPING (IN-GAME ONLY) ---
+; =====================================================================
+
+#HotIf WinActive(GameExe)
+Space::s
+r::a
+#HotIf
+*/
